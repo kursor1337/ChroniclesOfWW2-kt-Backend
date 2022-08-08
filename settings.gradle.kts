@@ -1,0 +1,1 @@
+rootProject.name = "com.kursor.chroniclesofww2.chronicles-of-ww2"
