@@ -4,11 +4,15 @@ import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import com.kursor.chroniclesofww2.plugins.*
 
+const val PORT = 8080
+const val HOST = "0.0.0.0"
+
 fun main() {
-    embeddedServer(Netty, port = 8080, host = "0.0.0.0") {
+    embeddedServer(Netty, port = PORT, host = HOST) {
         configureSockets()
         configureSerialization()
         configureSecurity()
         configureRouting()
     }.start(wait = true)
 }
+
