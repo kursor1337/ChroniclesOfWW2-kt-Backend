@@ -32,12 +32,13 @@ class DB {
         return HikariDataSource(config)
     }
 
-    suspend fun <T> dbQuery(block: () -> T): T =
-        withContext(Dispatchers.IO) {
-            transaction {
-                addLogger(StdOutSqlLogger)
-                block()
+    companion object {
+        suspend fun <T> query(block: () -> T): T =
+            withContext(Dispatchers.IO) {
+                transaction {
+                    addLogger(StdOutSqlLogger)
+                    block()
+                }
             }
-        }
-
+    }
 }

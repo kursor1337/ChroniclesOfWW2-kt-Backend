@@ -6,30 +6,23 @@ import com.kursor.chroniclesofww2.entities.User
 import org.jetbrains.exposed.sql.*
 
 class UserRepository(
-    private val db: DB,
     private val usersTable: UsersTable
 ) {
 
-    suspend fun getUsersWithUsername(username: String): List<User> {
-        return db.dbQuery {
-            usersTable.select { usersTable.username.eq(username) }.map { it.toUser() }
-        }
+    suspend fun getUsersWithUsername(username: String): List<User> = DB.query {
+        usersTable.select { usersTable.username.eq(username) }.map { it.toUser() }
     }
 
-    suspend fun getAllUsers(): List<User> {
-        return db.dbQuery {
-            usersTable.selectAll().map { it.toUser() }
-        }
+    suspend fun getAllUsers(): List<User> = DB.query {
+        usersTable.selectAll().map { it.toUser() }
     }
 
-    suspend fun getUserByLogin(login: String): User? {
-        return db.dbQuery {
-            usersTable.select { usersTable.login.eq(login) }.map { it.toUser() }.singleOrNull()
-        }
+    suspend fun getUserByLogin(login: String): User? = DB.query {
+        usersTable.select { usersTable.login.eq(login) }.map { it.toUser() }.singleOrNull()
     }
 
     suspend fun saveUser(user: User) {
-        db.dbQuery {
+        DB.query {
             usersTable.insert { statement ->
                 statement[usersTable.login] = user.login
                 statement[usersTable.username] = user.username
@@ -39,7 +32,7 @@ class UserRepository(
     }
 
     suspend fun updateUser(user: User) {
-        db.dbQuery {
+        DB.query {
             usersTable.update({ usersTable.login eq user.login }) {
                 it[username] = user.username
                 it[passwordHash] = user.passwordHash
@@ -48,7 +41,7 @@ class UserRepository(
     }
 
     suspend fun deleteUser(login: String) {
-        db.dbQuery {
+        DB.query {
             usersTable.deleteWhere { usersTable.login eq login }
         }
     }
@@ -57,7 +50,7 @@ class UserRepository(
         deleteUser(user.login)
     }
 
-    fun ResultRow.toUser(): User = User(
+    private fun ResultRow.toUser(): User = User(
         this[usersTable.login],
         this[usersTable.username],
         this[usersTable.passwordHash]

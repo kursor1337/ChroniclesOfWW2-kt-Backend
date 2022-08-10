@@ -25,6 +25,8 @@ repositories {
 
 dependencies {
 
+    implementation(project(":models"))
+
 
     // Koin Core features
     implementation("io.insert-koin:koin-core:$koin_version")
