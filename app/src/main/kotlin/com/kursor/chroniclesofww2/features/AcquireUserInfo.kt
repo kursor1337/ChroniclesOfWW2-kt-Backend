@@ -4,6 +4,6 @@ import kotlinx.serialization.Serializable
 
 
 @Serializable
-data class UserInfo(
+data class UserInfoResponse(
     val username: String
 )

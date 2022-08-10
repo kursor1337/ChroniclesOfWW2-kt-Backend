@@ -17,6 +17,8 @@ class UserManager(val userRepository: UserRepository) {
         return emptyList()
     }
 
+    suspend fun getUserByLogin(login: String): User? = userRepository.getUserByLogin(login)
+
     suspend fun loginUser(loginReceiveDTO: LoginReceiveDTO): LoginResponseDTO {
         val user = userRepository.getUserByLogin(loginReceiveDTO.login)
             ?: return LoginResponseDTO(
