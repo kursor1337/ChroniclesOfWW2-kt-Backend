@@ -7,7 +7,7 @@ val exposedVersion: String by project
 plugins {
     application
     kotlin("jvm") version "1.7.10"
-                id("org.jetbrains.kotlin.plugin.serialization") version "1.7.10"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.7.10"
 }
 
 group = "com.kursor.chroniclesofww2"
@@ -44,7 +44,7 @@ dependencies {
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
 
 
-    //ktor
+    //exposed db
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")

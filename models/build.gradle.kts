@@ -8,6 +8,7 @@ val exposedVersion: String by project
 plugins {
     application
     kotlin("jvm") version "1.7.10"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.7.10"
 }
 
 version = "unspecified"
