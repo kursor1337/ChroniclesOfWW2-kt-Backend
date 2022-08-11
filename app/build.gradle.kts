@@ -28,6 +28,8 @@ dependencies {
     implementation(project(":models"))
     implementation(project(":data"))
 
+    implementation("io.ktor:ktor-server-cors:2.0.2")
+
     //cli
     implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.4")
 

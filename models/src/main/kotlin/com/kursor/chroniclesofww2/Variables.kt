@@ -2,5 +2,5 @@ package com.kursor.chroniclesofww2
 
 object Variables {
     val JWT_SECRET = System.getenv("JWT_SECRET")
-    val POSTGRES_DB_PASSWORD = "16253649"
+    val POSTGRES_DB_PASSWORD = System.getenv("POSTGRES_DB_PASSWORD")
 }

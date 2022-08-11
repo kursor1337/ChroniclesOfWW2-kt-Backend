@@ -3,6 +3,7 @@ package com.kursor.chroniclesofww2.plugins
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.kursor.chroniclesofww2.Variables
+import com.kursor.chroniclesofww2.logging.Log
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -17,13 +18,14 @@ fun Application.configureAuthentication() {
                     .build()
             )
             validate { credential ->
+                Log.d("Auth JWT", credential.payload.getClaim("login").asString())
                 if (credential.payload.getClaim("login").asString() != "") {
                     JWTPrincipal(credential.payload)
                 } else {
                     null
                 }
             }
-            challenge { _, _ ->
+            challenge { m, d ->
                 call.respond(HttpStatusCode.Unauthorized, "Token is not valid or has expired")
             }
         }
