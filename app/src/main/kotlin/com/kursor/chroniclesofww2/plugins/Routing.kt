@@ -10,16 +10,6 @@ import io.ktor.server.request.*
 import org.koin.ktor.ext.inject
 
 fun Application.configureRouting() {
-
     val userManager by inject<UserManager>()
-
-    install(Routing) {
-        userRouting(userManager)
-    }
-
-    routing {
-        get("/") {
-            call.respondText("Hello World!")
-        }
-    }
+    userRouting(userManager)
 }

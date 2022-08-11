@@ -1,3 +1,4 @@
+val postgres_version: String by project
 val ktor_version: String by project
 val kotlin_version: String by project
 val exposedVersion: String by project
@@ -26,6 +27,9 @@ dependencies {
 
 
     implementation(project(":models"))
+
+    //postgresql
+    implementation("org.postgresql:postgresql:$postgres_version")
 
     //hikari connection pool
     implementation("com.zaxxer:HikariCP:5.0.1")

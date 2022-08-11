@@ -1,5 +1,6 @@
 package com.kursor.chroniclesofww2.db
 
+import com.kursor.chroniclesofww2.PASSWORD
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.Dispatchers
@@ -10,7 +11,7 @@ import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
 
 
-const val DB_NAME = "Chronicles of WW2"
+const val DB_NAME = "Chronicles Of WW2"
 const val DB_PORT = 5432
 
 class DB {
@@ -23,8 +24,8 @@ class DB {
         val config = HikariConfig()
         config.driverClassName = "org.postgresql.Driver"
         config.jdbcUrl = "jdbc:postgresql://localhost:$DB_PORT/$DB_NAME"
-        config.username = ""
-        config.password = ""
+        config.username = "postgres"
+        config.password = PASSWORD
         config.maximumPoolSize = 10
         config.isAutoCommit = false
         config.transactionIsolation = "TRANSACTION_REPEATABLE_READ"
