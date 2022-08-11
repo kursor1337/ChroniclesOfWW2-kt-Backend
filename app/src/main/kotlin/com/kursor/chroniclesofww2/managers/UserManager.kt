@@ -2,7 +2,6 @@ package com.kursor.chroniclesofww2.managers
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.kursor.chroniclesofww2.Variables
 import com.kursor.chroniclesofww2.Variables.JWT_SECRET
 import com.kursor.chroniclesofww2.entities.User
 import com.kursor.chroniclesofww2.features.*
@@ -55,7 +54,13 @@ class UserManager(val userRepository: UserRepository) {
             )
         userRepository.updateUser(User(login, user.username, BCrypt.hashpw(newPassword, BCrypt.gensalt())))
         val newToken = TokenManager.generateToken(user)
-        return ChangePasswordResponseDTO(token = newToken)
+        return ChangePasswordResponseDTO(token = newToken, message = SUCCESS)
+    }
+
+    suspend fun deleteUser(login: String): DeleteUserResponseDTO {
+        if (userRepository.getUserByLogin(login) == null) return DeleteUserResponseDTO(NO_SUCH_USER)
+        userRepository.deleteUser(login)
+        return DeleteUserResponseDTO(message = SUCCESS)
     }
 
     suspend fun registerUser(registerReceiveDTO: RegisterReceiveDTO): RegisterResponseDTO {

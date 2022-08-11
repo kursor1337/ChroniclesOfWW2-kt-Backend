@@ -22,7 +22,7 @@ data class ChangePasswordReceiveDTO(
 @Serializable
 data class ChangePasswordResponseDTO(
     val token: String?,
-    val message: String = SUCCESS
+    val message: String
 )
 
 @Serializable
@@ -32,7 +32,17 @@ data class UpdateUserInfoReceiveDTO(
 
 @Serializable
 data class UpdateUserInfoResponseDTO(
-    val message: String = SUCCESS
+    val message: String
+)
+
+@Serializable
+data class DeleteUserReceiveDTO(
+    val login: String
+)
+
+@Serializable
+data class DeleteUserResponseDTO(
+    val message: String
 )
 
 object UserInfoMessages {

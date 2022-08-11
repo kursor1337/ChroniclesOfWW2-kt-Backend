@@ -1,6 +1,7 @@
 package com.kursor.chroniclesofww2.routes
 
 import com.auth0.jwt.JWT
+import com.kursor.chroniclesofww2.AUTH_JWT
 import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.SUCCESS
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.USER_ALREADY_REGISTERED
@@ -33,7 +34,7 @@ fun Application.userRouting(userManager: UserManager) {
                 } else call.respond(HttpStatusCode.OK, UserInfo.from(user))
             }
 
-            authenticate("auth-jwt") {
+            authenticate(AUTH_JWT) {
                 put("/change_password") {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
@@ -72,9 +73,6 @@ fun Application.userRouting(userManager: UserManager) {
                     else -> HttpStatusCode.BadRequest
                 }
                 call.respond(statusCode, respond)
-            }
-            authenticate("auth-jwt") {
-
             }
         }
     }
