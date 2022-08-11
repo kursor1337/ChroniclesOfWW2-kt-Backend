@@ -34,22 +34,20 @@ fun Application.userRouting(userManager: UserManager) {
             }
 
             authenticate("auth-jwt") {
-                post("/change_password") {
+                put("/change_password") {
                     val principal = call.principal<JWTPrincipal>()
-                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@post
+                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
                     val changePasswordReceiveDTO = call.receive<ChangePasswordReceiveDTO>()
                     val response = userManager.changePasswordForUser(login, changePasswordReceiveDTO.newPassword)
                     call.respond(response)
-                    //todo JWT token refresh after changing password
                 }
 
-                post("/update_userinfo") {
+                put("/update_userinfo") {
                     val principal = call.principal<JWTPrincipal>()
-                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@post
+                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
                     val updateUserInfoReceiveDTO = call.receive<UpdateUserInfoReceiveDTO>()
                     val response = userManager.updateUserInfo(login, updateUserInfoReceiveDTO.updatedUserInfo)
                     call.respond(response)
-                    //todo
                 }
             }
 
