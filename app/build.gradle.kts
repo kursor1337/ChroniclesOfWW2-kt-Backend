@@ -28,6 +28,9 @@ dependencies {
     implementation(project(":models"))
     implementation(project(":data"))
 
+    //cli
+    implementation("org.jetbrains.kotlinx:kotlinx-cli:0.3.4")
+
     //crypt
     implementation("org.mindrot:jbcrypt:0.4")
 

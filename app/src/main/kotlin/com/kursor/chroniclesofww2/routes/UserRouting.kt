@@ -1,10 +1,7 @@
 package com.kursor.chroniclesofww2.routes
 
-import com.kursor.chroniclesofww2.features.LoginErrorMessages
-import com.kursor.chroniclesofww2.features.LoginReceiveDTO
+import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.USER_ALREADY_REGISTERED
-import com.kursor.chroniclesofww2.features.RegisterReceiveDTO
-import com.kursor.chroniclesofww2.features.UserInfoResponse
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.managers.UserManager
 import io.ktor.http.*
@@ -19,7 +16,7 @@ fun Application.userRouting(userManager: UserManager) {
         route("/users") {
             get {
                 Log.d(TAG, "GET: getting list of users")
-                val userInfoResponseList = userManager.getAllUsers().map { UserInfoResponse(it.username) }
+                val userInfoResponseList = userManager.getAllUsers().map { UserInfo(it.username) }
                 call.respond(userInfoResponseList)
             }
 
@@ -29,7 +26,15 @@ fun Application.userRouting(userManager: UserManager) {
                 val user = userManager.getUserByLogin(login = login)
                 if (user == null) {
                     call.respond(HttpStatusCode.NotFound)
-                } else call.respond(HttpStatusCode.OK, UserInfoResponse.from(user))
+                } else call.respond(HttpStatusCode.OK, UserInfo.from(user))
+            }
+
+            post("/change_password") {
+                val changePasswordReceiveDTO = call.receive<ChangePasswordReceiveDTO>()
+                val isSuccesful = userManager.changePasswordForUser(changePasswordReceiveDTO)
+                val statusCode = if (isSuccesful) HttpStatusCode.OK
+                else HttpStatusCode.Conflict
+                call.respond(statusCode)
             }
 
             post("/register") {

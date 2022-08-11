@@ -2,7 +2,7 @@ package com.kursor.chroniclesofww2.managers
 
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
-import com.kursor.chroniclesofww2.SecuredConst.Jwt.JWT_SECRET
+import com.kursor.chroniclesofww2.Variables.JWT_SECRET
 import com.kursor.chroniclesofww2.entities.User
 import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.features.LoginErrorMessages.INCORRECT_PASSWORD
@@ -34,9 +34,27 @@ class UserManager(val userRepository: UserRepository) {
         }
         val token = JWT.create()
             .withClaim("login", user.login)
-            .sign(Algorithm.HMAC256(JWT_SECRET))
+            .sign(Algorithm.HMAC256(System.getenv("JWT_SECRET")))
 
         return LoginResponseDTO(token = token)
+    }
+
+    suspend fun updateUserInfo(updateUserInfoReceiveDTO: UpdateUserInfoReceiveDTO): Boolean {
+        val token = updateUserInfoReceiveDTO.token
+        val newUserInfo = updateUserInfoReceiveDTO.updatedUserInfo
+        val login = JWT.decode(token).getClaim("login").asString()
+        val user = userRepository.getUserByLogin(login) ?: return false
+        userRepository.updateUser(User(login, newUserInfo.username, user.passwordHash))
+        return true
+    }
+
+    suspend fun changePasswordForUser(changePasswordReceiveDTO: ChangePasswordReceiveDTO): Boolean {
+        val token = changePasswordReceiveDTO.token
+        val newPassword = changePasswordReceiveDTO.newPassword
+        val login = JWT.decode(token).getClaim("login").asString()
+        val user = userRepository.getUserByLogin(login) ?: return false
+        userRepository.updateUser(User(login, user.username, BCrypt.hashpw(newPassword, BCrypt.gensalt())))
+        return true
     }
 
     suspend fun registerUser(registerReceiveDTO: RegisterReceiveDTO): RegisterResponseDTO {

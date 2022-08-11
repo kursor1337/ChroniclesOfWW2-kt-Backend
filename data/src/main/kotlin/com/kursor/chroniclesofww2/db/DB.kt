@@ -1,6 +1,6 @@
 package com.kursor.chroniclesofww2.db
 
-import com.kursor.chroniclesofww2.PASSWORD
+import com.kursor.chroniclesofww2.Variables
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import kotlinx.coroutines.Dispatchers
@@ -25,7 +25,7 @@ class DB {
         config.driverClassName = "org.postgresql.Driver"
         config.jdbcUrl = "jdbc:postgresql://localhost:$DB_PORT/$DB_NAME"
         config.username = "postgres"
-        config.password = PASSWORD
+        config.password = Variables.POSTGRES_DB_PASSWORD
         config.maximumPoolSize = 10
         config.isAutoCommit = false
         config.transactionIsolation = "TRANSACTION_REPEATABLE_READ"

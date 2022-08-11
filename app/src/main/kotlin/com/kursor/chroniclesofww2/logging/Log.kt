@@ -1,5 +1,6 @@
 package com.kursor.chroniclesofww2.logging
 
+import com.kursor.chroniclesofww2.App
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
@@ -31,6 +32,7 @@ object Log {
     }
 
     fun d(tag: String, message: String) {
+        if (!App.instance.appConfig.debug) return
         message.split("\n").forEach {
             writeln("${getTimeDate()} DEBUG $tag: $it")
         }

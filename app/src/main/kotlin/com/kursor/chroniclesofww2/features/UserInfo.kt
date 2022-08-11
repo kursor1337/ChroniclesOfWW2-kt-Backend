@@ -5,10 +5,22 @@ import kotlinx.serialization.Serializable
 
 
 @Serializable
-data class UserInfoResponse(
+data class UserInfo(
     val username: String
 ) {
     companion object {
-        fun from(user: User): UserInfoResponse = UserInfoResponse(user.username)
+        fun from(user: User): UserInfo = UserInfo(user.username)
     }
 }
+
+@Serializable
+data class ChangePasswordReceiveDTO(
+    val token: String,
+    val newPassword: String
+)
+
+@Serializable
+data class UpdateUserInfoReceiveDTO(
+    val token: String,
+    val updatedUserInfo: UserInfo
+)
