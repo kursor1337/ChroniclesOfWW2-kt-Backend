@@ -1,10 +1,10 @@
 package com.kursor.chroniclesofww2.logging
 
-import io.ktor.server.application.*
 import java.io.File
 import java.io.FileOutputStream
 import java.io.OutputStreamWriter
 import java.text.DateFormat
+import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -25,38 +25,38 @@ object Log {
         writer = file.writer()
     }
 
-    private fun write(line: String) {
+    private fun writeln(line: String) {
         println(line)
         writer.write(line + "\n")
     }
 
     fun d(tag: String, message: String) {
         message.split("\n").forEach {
-            write("${getTimeDate()} D $tag: $it")
+            writeln("${getTimeDate()} DEBUG $tag: $it")
         }
     }
 
     fun e(tag: String, message: String) {
         message.split("\n").forEach {
-            write("${getTimeDate()} E $tag: $it")
+            writeln("${getTimeDate()} ERROR $tag: $it")
         }
     }
 
     fun f(tag: String, message: String) {
         message.split("\n").forEach {
-            write("${getTimeDate()} F $tag: $it")
+            writeln("${getTimeDate()} FATAL $tag: $it")
         }
-        write("${getTimeDate()} F $TAG: FATAL: Can't continue. Exiting with error code 1")
+        writeln("${getTimeDate()} FATAL $TAG: FATAL: Can't continue. Exiting with error code 1")
         exitProcess(1)
     }
 
     fun i(tag: String, message: String) {
         message.split("\n").forEach {
-            write("${getTimeDate()} I $tag: $it")
+            writeln("${getTimeDate()} INFO $tag: $it")
         }
     }
 
-    private fun getTimeDate(): String = DateFormat.getDateTimeInstance().format(Date())
+    private fun getTimeDate(): String = SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(Date())
 
     fun onDestroy() {
         writer.close()

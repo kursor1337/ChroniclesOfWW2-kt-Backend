@@ -5,6 +5,7 @@ import com.kursor.chroniclesofww2.features.LoginReceiveDTO
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.USER_ALREADY_REGISTERED
 import com.kursor.chroniclesofww2.features.RegisterReceiveDTO
 import com.kursor.chroniclesofww2.features.UserInfoResponse
+import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.managers.UserManager
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -13,19 +14,22 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Application.userRouting(userManager: UserManager) {
+    val TAG = "userRouting"
     routing {
         route("/users") {
             get {
+                Log.d(TAG, "GET: getting list of users")
                 val userInfoResponseList = userManager.getAllUsers().map { UserInfoResponse(it.username) }
                 call.respond(userInfoResponseList)
             }
 
-            get("/users/{login}") {
+            get("/{login}") {
                 val login = call.parameters["login"] ?: return@get
-                val userInfoResponse = userManager.getUserByLogin(login = login)
-                if (userInfoResponse == null) {
+                Log.d(TAG, "GET: $login")
+                val user = userManager.getUserByLogin(login = login)
+                if (user == null) {
                     call.respond(HttpStatusCode.NotFound)
-                } else call.respond(HttpStatusCode.OK, userInfoResponse)
+                } else call.respond(HttpStatusCode.OK, UserInfoResponse.from(user))
             }
 
             post("/register") {

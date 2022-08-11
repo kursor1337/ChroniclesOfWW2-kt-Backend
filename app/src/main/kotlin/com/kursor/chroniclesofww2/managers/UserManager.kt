@@ -14,7 +14,7 @@ import org.mindrot.jbcrypt.BCrypt
 class UserManager(val userRepository: UserRepository) {
 
     suspend fun getAllUsers(): List<User> {
-        return emptyList()
+        return userRepository.getAllUsers()
     }
 
     suspend fun getUserByLogin(login: String): User? = userRepository.getUserByLogin(login)

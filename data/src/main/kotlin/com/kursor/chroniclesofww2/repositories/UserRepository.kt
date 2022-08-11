@@ -10,7 +10,7 @@ class UserRepository(
 ) {
 
     suspend fun getUsersWithUsername(username: String): List<User> = DB.query {
-        usersTable.select { usersTable.username.eq(username) }.map { it.toUser() }
+        usersTable.select { usersTable.username eq username }.map { it.toUser() }
     }
 
     suspend fun getAllUsers(): List<User> = DB.query {
@@ -18,15 +18,15 @@ class UserRepository(
     }
 
     suspend fun getUserByLogin(login: String): User? = DB.query {
-        usersTable.select { usersTable.login.eq(login) }.map { it.toUser() }.singleOrNull()
+        usersTable.select { usersTable.login eq login }.map { it.toUser() }.singleOrNull()
     }
 
     suspend fun saveUser(user: User) {
         DB.query {
-            usersTable.insert { statement ->
-                statement[usersTable.login] = user.login
-                statement[usersTable.username] = user.username
-                statement[usersTable.passwordHash] = user.passwordHash
+            usersTable.insert { row ->
+                row[usersTable.login] = user.login
+                row[usersTable.username] = user.username
+                row[usersTable.passwordHash] = user.passwordHash
             }
         }
     }
