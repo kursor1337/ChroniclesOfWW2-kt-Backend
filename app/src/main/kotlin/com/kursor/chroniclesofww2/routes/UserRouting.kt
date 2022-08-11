@@ -1,11 +1,15 @@
 package com.kursor.chroniclesofww2.routes
 
+import com.auth0.jwt.JWT
 import com.kursor.chroniclesofww2.features.*
+import com.kursor.chroniclesofww2.features.RegisterErrorMessages.SUCCESS
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.USER_ALREADY_REGISTERED
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.managers.UserManager
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -29,19 +33,31 @@ fun Application.userRouting(userManager: UserManager) {
                 } else call.respond(HttpStatusCode.OK, UserInfo.from(user))
             }
 
-            post("/change_password") {
-                val changePasswordReceiveDTO = call.receive<ChangePasswordReceiveDTO>()
-                val isSuccesful = userManager.changePasswordForUser(changePasswordReceiveDTO)
-                val statusCode = if (isSuccesful) HttpStatusCode.OK
-                else HttpStatusCode.Conflict
-                call.respond(statusCode)
+            authenticate("auth-jwt") {
+                post("/change_password") {
+                    val principal = call.principal<JWTPrincipal>()
+                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@post
+                    val changePasswordReceiveDTO = call.receive<ChangePasswordReceiveDTO>()
+                    val response = userManager.changePasswordForUser(login, changePasswordReceiveDTO.newPassword)
+                    call.respond(response)
+                    //todo JWT token refresh after changing password
+                }
+
+                post("/update_userinfo") {
+                    val principal = call.principal<JWTPrincipal>()
+                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@post
+                    val updateUserInfoReceiveDTO = call.receive<UpdateUserInfoReceiveDTO>()
+                    val response = userManager.updateUserInfo(login, updateUserInfoReceiveDTO.updatedUserInfo)
+                    call.respond(response)
+                    //todo
+                }
             }
 
             post("/register") {
                 val registerReceiveDTO = call.receive<RegisterReceiveDTO>()
                 val respond = userManager.registerUser(registerReceiveDTO)
-                val statusCode = when (respond.errorMessage) {
-                    null -> HttpStatusCode.OK
+                val statusCode = when (respond.message) {
+                    SUCCESS -> HttpStatusCode.OK
                     USER_ALREADY_REGISTERED -> HttpStatusCode.Conflict
                     else -> HttpStatusCode.BadRequest
                 }
@@ -51,13 +67,16 @@ fun Application.userRouting(userManager: UserManager) {
             post("/login") {
                 val loginReceiveDTO = call.receive<LoginReceiveDTO>()
                 val respond = userManager.loginUser(loginReceiveDTO)
-                val statusCode = when (respond.errorMessage) {
-                    null -> HttpStatusCode.OK
+                val statusCode = when (respond.message) {
+                    SUCCESS -> HttpStatusCode.OK
                     LoginErrorMessages.NO_SUCH_USER -> HttpStatusCode.NotFound
                     LoginErrorMessages.INCORRECT_PASSWORD -> HttpStatusCode.Unauthorized
                     else -> HttpStatusCode.BadRequest
                 }
                 call.respond(statusCode, respond)
+            }
+            authenticate("auth-jwt") {
+
             }
         }
     }

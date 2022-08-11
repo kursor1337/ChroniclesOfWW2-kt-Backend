@@ -13,12 +13,11 @@ fun Application.configureAuthentication() {
     install(Authentication) {
         jwt("auth-jwt") {
             verifier(
-                JWT
-                    .require(Algorithm.HMAC256(Variables.JWT_SECRET))
+                JWT.require(Algorithm.HMAC256(Variables.JWT_SECRET))
                     .build()
             )
             validate { credential ->
-                if (credential.payload.getClaim("id").asString() != "") {
+                if (credential.payload.getClaim("login").asString() != "") {
                     JWTPrincipal(credential.payload)
                 } else {
                     null
