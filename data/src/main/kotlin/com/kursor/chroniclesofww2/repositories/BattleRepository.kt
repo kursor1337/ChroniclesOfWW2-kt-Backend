@@ -14,9 +14,9 @@ class BattleRepository(
         battleTable.select { battleTable.id eq id }.map { it.toBattle() }.singleOrNull()
     }
 
-    suspend fun getBattlesForUser(user: User): List<Battle> = getBattlesForUser(user.login)
+    suspend fun getBattlesOfUser(user: User): List<Battle> = getBattlesOfUser(user.login)
 
-    suspend fun getBattlesForUser(userLogin: String): List<Battle> = DB.query {
+    suspend fun getBattlesOfUser(userLogin: String): List<Battle> = DB.query {
         battleTable.select { battleTable.loginOfCreator eq userLogin }.map { it.toBattle() }
     }
 

@@ -44,4 +44,5 @@ object BattleFeaturesMessages {
     const val SUCCESS = "Success"
     const val NO_SPACE_LEFT = "No space left"
     const val NO_BATTLE_WITH_SUCH_ID = "No battle with such id"
+    const val NOT_CREATOR = "Not creator of battle"
 }

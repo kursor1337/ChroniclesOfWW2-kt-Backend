@@ -2,6 +2,7 @@ package com.kursor.chroniclesofww2.managers
 
 import com.kursor.chroniclesofww2.entities.Battle
 import com.kursor.chroniclesofww2.features.*
+import com.kursor.chroniclesofww2.features.BattleFeaturesMessages.NOT_CREATOR
 import com.kursor.chroniclesofww2.features.BattleFeaturesMessages.NO_BATTLE_WITH_SUCH_ID
 import com.kursor.chroniclesofww2.features.BattleFeaturesMessages.NO_SPACE_LEFT
 import com.kursor.chroniclesofww2.features.BattleFeaturesMessages.SUCCESS
@@ -13,9 +14,13 @@ class BattleManager(private val battleRepository: BattleRepository) {
         return battleRepository.getAllBattles()
     }
 
+    suspend fun getBattlesOfUser(login: String): List<Battle> {
+        return battleRepository.getBattlesOfUser(login)
+    }
+
     suspend fun getBattleById(id: Int): Battle? = battleRepository.getBattleById(id)
 
-    suspend fun saveBattle(battleReceiveDTO: SaveBattleReceiveDTO): SaveBattleResponseDTO {
+    suspend fun saveBattle(login: String, battleReceiveDTO: SaveBattleReceiveDTO): SaveBattleResponseDTO {
         val id = findFreeId() ?: return SaveBattleResponseDTO(id = null, message = NO_SPACE_LEFT)
         battleRepository.saveBattle(
             Battle(
@@ -29,7 +34,8 @@ class BattleManager(private val battleRepository: BattleRepository) {
         return SaveBattleResponseDTO(id = id, message = SUCCESS)
     }
 
-    suspend fun editBattle(editBattleReceiveDTO: EditBattleReceiveDTO): EditBattleResponseDTO {
+    suspend fun editBattle(login: String, editBattleReceiveDTO: EditBattleReceiveDTO): EditBattleResponseDTO {
+        if (!isCreator(login, editBattleReceiveDTO.id)) return EditBattleResponseDTO(message = NOT_CREATOR)
         val battle = battleRepository.getBattleById(editBattleReceiveDTO.id)
             ?: return EditBattleResponseDTO(message = NO_BATTLE_WITH_SUCH_ID)
         battleRepository.updateBattle(
@@ -45,10 +51,17 @@ class BattleManager(private val battleRepository: BattleRepository) {
     }
 
 
-    suspend fun deleteBattle(id: Int): DeleteBattleResponseDTO {
-        if (battleRepository.getBattleById(id) == null) return DeleteBattleResponseDTO(message = NO_BATTLE_WITH_SUCH_ID)
-        battleRepository.deleteBattle(id)
+    suspend fun deleteBattle(login: String, deleteBattleReceiveDTO: DeleteBattleReceiveDTO): DeleteBattleResponseDTO {
+        if (!isCreator(login, deleteBattleReceiveDTO.id)) return DeleteBattleResponseDTO(message = NOT_CREATOR)
+        if (battleRepository.getBattleById(deleteBattleReceiveDTO.id) == null) {
+            return DeleteBattleResponseDTO(message = NO_BATTLE_WITH_SUCH_ID)
+        }
+        battleRepository.deleteBattle(deleteBattleReceiveDTO.id)
         return DeleteBattleResponseDTO(message = SUCCESS)
+    }
+
+    private suspend fun isCreator(login: String, battleId: Int): Boolean {
+        return getBattleById(battleId)?.loginOfCreator == login
     }
 
     private suspend fun findFreeId(): Int? {
