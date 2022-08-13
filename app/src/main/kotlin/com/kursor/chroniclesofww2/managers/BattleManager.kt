@@ -1,6 +1,6 @@
 package com.kursor.chroniclesofww2.managers
 
-import com.kursor.chroniclesofww2.entities.Battle
+import com.kursor.chroniclesofww2.entities.BattleDAO
 import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.features.BattleFeaturesMessages.NOT_CREATOR
 import com.kursor.chroniclesofww2.features.BattleFeaturesMessages.NO_BATTLE_WITH_SUCH_ID
@@ -10,20 +10,20 @@ import com.kursor.chroniclesofww2.repositories.BattleRepository
 
 class BattleManager(private val battleRepository: BattleRepository) {
 
-    suspend fun getAllBattles(): List<Battle> {
+    suspend fun getAllBattles(): List<BattleDAO> {
         return battleRepository.getAllBattles()
     }
 
-    suspend fun getBattlesOfUser(login: String): List<Battle> {
+    suspend fun getBattlesOfUser(login: String): List<BattleDAO> {
         return battleRepository.getBattlesOfUser(login)
     }
 
-    suspend fun getBattleById(id: Int): Battle? = battleRepository.getBattleById(id)
+    suspend fun getBattleById(id: Int): BattleDAO? = battleRepository.getBattleById(id)
 
     suspend fun saveBattle(login: String, battleReceiveDTO: SaveBattleReceiveDTO): SaveBattleResponseDTO {
         val id = findFreeId() ?: return SaveBattleResponseDTO(id = null, message = NO_SPACE_LEFT)
         battleRepository.saveBattle(
-            Battle(
+            BattleDAO(
                 id = id,
                 loginOfCreator = battleReceiveDTO.loginOfCreator,
                 name = battleReceiveDTO.name,
@@ -39,7 +39,7 @@ class BattleManager(private val battleRepository: BattleRepository) {
         val battle = battleRepository.getBattleById(editBattleReceiveDTO.id)
             ?: return EditBattleResponseDTO(message = NO_BATTLE_WITH_SUCH_ID)
         battleRepository.updateBattle(
-            Battle(
+            BattleDAO(
                 battle.id,
                 battle.loginOfCreator,
                 editBattleReceiveDTO.name,

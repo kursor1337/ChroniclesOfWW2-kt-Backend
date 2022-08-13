@@ -15,6 +15,7 @@ version = "unspecified"
 
 repositories {
     mavenCentral()
+    maven { setUrl("https://jitpack.io") }
 }
 
 dependencies {
@@ -34,4 +35,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
     testRuntimeOnly ("org.junit.jupiter:junit-jupiter-engine:5.7.0")
+
+    implementation("com.github.kursor1337:chronicles-of-ww2-kt-model:0.2")
 }
