@@ -16,21 +16,21 @@ import io.ktor.server.routing.*
 fun Application.battleRouting(battleManager: BattleManager) {
     routing {
         route("/battles") {
-            get {
-                call.respond(battleManager.getAllBattles())
-            }
-
-            get("/{id}") {
-                val id = call.parameters["id"]?.toInt() ?: return@get
-                val battle = battleManager.getBattleById(id)
-                if (battle == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@get
-                }
-                call.respond(HttpStatusCode.OK, battle)
-            }
-
             authenticate(AUTH_JWT) {
+                get {
+                    call.respond(battleManager.getAllBattles())
+                }
+
+                get("/{id}") {
+                    val id = call.parameters["id"]?.toInt() ?: return@get
+                    val battle = battleManager.getBattleById(id)
+                    if (battle == null) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@get
+                    }
+                    call.respond(HttpStatusCode.OK, battle)
+                }
+
                 get("/my") {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@get
