@@ -14,7 +14,7 @@ class GameManager {
     suspend fun createGame(createGameReceiveDTO: CreateGameReceiveDTO): CreateGameResponseDTO {
         val id = generateGameId()
         val gameDataWaiting = GameDataWaiting(id, createGameReceiveDTO)
-        GameController.waitingGames[id] = gameDataWaiting
+        GameController.gameCreated(gameDataWaiting)
         return CreateGameResponseDTO(gameId = id)
     }
 
@@ -26,17 +26,24 @@ class GameManager {
                 gameData = null
             )
         val gameSession = createGameSession(gameDataWaiting, joinGameReceiveDTO)
-        GameController.currentGameSessions[id] = gameSession
-        GameController.waitingGames.remove(id)
+        GameController.gameInitialized(gameSession)
         return JoinGameResponseDTO(
             message = GameFeaturesMessages.SUCCESS,
             gameData = gameSession.initiatorGameData.getVersionForAnotherPlayer()
         )
     }
 
-    fun getGameSessionById(id: Int): GameSession? = GameController.currentGameSessions[id]
+    fun getGameSessionById(id: Int): GameSession? = GameController.getCurrentGameSessions()[id]
 
-    fun getWaitingGameById(id: Int): GameDataWaiting? = GameController.waitingGames[id]
+    fun getWaitingGameById(id: Int): GameDataWaiting? = GameController.getWaitingGames()[id]
+
+    fun startObservingGames(observer: GameControllerObserver) {
+        GameController.observers.add(observer)
+    }
+
+    fun stopObservingGames(observer: GameControllerObserver) {
+        GameController.observers.remove(observer)
+    }
 
     private fun createGameSession(gameDataWaiting: GameDataWaiting, joinGameReceiveDTO: JoinGameReceiveDTO): GameSession {
         val gameData = GameData(
@@ -61,10 +68,33 @@ class GameManager {
         return id
     }
 
+    interface GameControllerObserver {
+        suspend fun onGameSessionInitialized(gameSession: GameSession)
+        suspend fun onWaitingGameCreated(gameDataWaiting: GameDataWaiting)
+    }
+
     private object GameController {
 
-        val currentGameSessions = mutableMapOf<Int, GameSession>()
-        val waitingGames = mutableMapOf<Int, GameDataWaiting>()
+        private val currentGameSessions = mutableMapOf<Int, GameSession>()
+        private val waitingGames = mutableMapOf<Int, GameDataWaiting>()
+        val observers = mutableListOf<GameControllerObserver>()
+
+        suspend fun gameCreated(gameDataWaiting: GameDataWaiting) {
+            waitingGames[gameDataWaiting.id] = gameDataWaiting
+            observers.forEach { it.onWaitingGameCreated(gameDataWaiting) }
+        }
+
+        suspend fun gameInitialized(gameSession: GameSession) {
+            currentGameSessions[gameSession.id] = gameSession
+            waitingGames.remove(gameSession.id)
+            observers.forEach { it.onGameSessionInitialized(gameSession) }
+        }
+
+        fun getCurrentGameSessions(): Map<Int, GameSession> = currentGameSessions
+
+        fun getWaitingGames(): Map<Int, GameDataWaiting> = waitingGames
+
+
 
     }
 

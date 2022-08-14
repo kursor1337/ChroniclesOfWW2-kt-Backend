@@ -21,6 +21,7 @@ data class CreateGameResponseDTO(
 
 @Serializable
 data class JoinGameReceiveDTO(
+    val connectedUserLogin: String,
     val gameId: Int,
     val password: String?
 )
@@ -48,4 +49,6 @@ object GameFeaturesMessages {
     const val SUCCESS = "Success"
     const val NO_GAME_WITH_SUCH_ID = "No game with such id"
     const val CONNECT = "Connect"
+    const val WAITING_FOR_CONNECTIONS = "Waiting for connections"
+    const val USER_CONNECTED = "User connected"
 }
