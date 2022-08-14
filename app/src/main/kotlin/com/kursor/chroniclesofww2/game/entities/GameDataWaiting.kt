@@ -6,6 +6,7 @@ import com.kursor.chroniclesofww2.model.serializable.Battle
 class GameDataWaiting(
     val id: Int,
     val initiatorLogin: String,
+    val password: String,
     val battle: Battle,
     val boardHeight: Int,
     val boardWidth: Int
@@ -13,6 +14,7 @@ class GameDataWaiting(
 
     constructor(id: Int, createGameReceiveDTO: CreateGameReceiveDTO): this(
         id,
+        createGameReceiveDTO.password,
         createGameReceiveDTO.initiatorLogin,
         createGameReceiveDTO.battle,
         createGameReceiveDTO.boardHeight,

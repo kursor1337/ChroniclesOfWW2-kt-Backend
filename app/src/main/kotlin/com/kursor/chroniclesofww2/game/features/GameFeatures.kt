@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CreateGameReceiveDTO(
     val initiatorLogin: String,
+    val password: String,
     val battle: Battle,
     val boardHeight: Int,
     val boardWidth: Int
@@ -20,8 +21,8 @@ data class CreateGameResponseDTO(
 
 @Serializable
 data class JoinGameReceiveDTO(
-    val connectedUserLogin: String,
-    val gameId: Int
+    val gameId: Int,
+    val password: String?
 )
 
 @Serializable
@@ -31,7 +32,20 @@ data class JoinGameResponseDTO(
 )
 
 
+@Serializable
+data class WebSocketReceiveDTO(
+    val type: WebSocketMessageType,
+    val message: String,
+)
+
+enum class WebSocketMessageType {
+
+    CREATE, JOIN, CONNECT, DISCONNECT, MOVE
+
+}
+
 object GameFeaturesMessages {
     const val SUCCESS = "Success"
     const val NO_GAME_WITH_SUCH_ID = "No game with such id"
+    const val CONNECT = "Connect"
 }
