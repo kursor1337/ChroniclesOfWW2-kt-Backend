@@ -64,5 +64,7 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
 
+    //my
     implementation("com.github.kursor1337:chronicles-of-ww2-kt-model:0.2")
+    implementation("com.github.kursor1337:chronicles-of-ww2-kt-dtos:0.1")
 }

@@ -1,6 +1,6 @@
-package com.kursor.chroniclesofww2.game.entities
+package com.kursor.chroniclesofww2.game
 
-import com.kursor.chroniclesofww2.game.CreateGameReceiveDTO
+import com.kursor.chroniclesofww2.features.CreateGameReceiveDTO
 import com.kursor.chroniclesofww2.model.serializable.Battle
 
 class GameDataWaiting(

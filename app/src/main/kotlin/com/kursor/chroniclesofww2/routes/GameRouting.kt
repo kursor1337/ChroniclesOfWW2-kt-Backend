@@ -1,13 +1,13 @@
-package com.kursor.chroniclesofww2.game.routes
+package com.kursor.chroniclesofww2.routes
 
 import com.kursor.chroniclesofww2.AUTH_JWT
-import com.kursor.chroniclesofww2.game.CreateGameReceiveDTO
-import com.kursor.chroniclesofww2.game.GameFeaturesMessages
-import com.kursor.chroniclesofww2.game.JoinGameReceiveDTO
-import com.kursor.chroniclesofww2.game.entities.GameDataWaiting
-import com.kursor.chroniclesofww2.game.entities.GameSession
-import com.kursor.chroniclesofww2.game.entities.GameSessionReceiveDTO
-import com.kursor.chroniclesofww2.game.managers.GameManager
+import com.kursor.chroniclesofww2.features.CreateGameReceiveDTO
+import com.kursor.chroniclesofww2.features.GameFeaturesMessages
+import com.kursor.chroniclesofww2.features.JoinGameReceiveDTO
+import com.kursor.chroniclesofww2.game.GameDataWaiting
+import com.kursor.chroniclesofww2.game.GameSession
+import com.kursor.chroniclesofww2.game.GameSessionReceiveDTO
+import com.kursor.chroniclesofww2.managers.GameManager
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*

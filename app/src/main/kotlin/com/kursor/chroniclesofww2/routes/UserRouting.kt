@@ -1,12 +1,12 @@
 package com.kursor.chroniclesofww2.routes
 
-import com.auth0.jwt.JWT
 import com.kursor.chroniclesofww2.AUTH_JWT
 import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.SUCCESS
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.USER_ALREADY_REGISTERED
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.managers.UserManager
+import com.kursor.chroniclesofww2.userInfo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -31,7 +31,7 @@ fun Application.userRouting(userManager: UserManager) {
                 val user = userManager.getUserByLogin(login = login)
                 if (user == null) {
                     call.respond(HttpStatusCode.NotFound)
-                } else call.respond(HttpStatusCode.OK, UserInfo.from(user))
+                } else call.respond(HttpStatusCode.OK, user.userInfo())
             }
 
             authenticate(AUTH_JWT) {
@@ -49,6 +49,10 @@ fun Application.userRouting(userManager: UserManager) {
                     val updateUserInfoReceiveDTO = call.receive<UpdateUserInfoReceiveDTO>()
                     val response = userManager.updateUserInfo(login, updateUserInfoReceiveDTO.updatedUserInfo)
                     call.respond(response)
+                }
+
+                post("/auth") {
+                    call.respond(HttpStatusCode.OK, "Authorized")
                 }
             }
 
@@ -74,6 +78,7 @@ fun Application.userRouting(userManager: UserManager) {
                 }
                 call.respond(statusCode, respond)
             }
+
         }
     }
 

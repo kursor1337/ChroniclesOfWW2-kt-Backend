@@ -1,8 +1,8 @@
-package com.kursor.chroniclesofww2.game.managers
+package com.kursor.chroniclesofww2.managers
 
-import com.kursor.chroniclesofww2.game.*
-import com.kursor.chroniclesofww2.game.entities.GameDataWaiting
-import com.kursor.chroniclesofww2.game.entities.GameSession
+import com.kursor.chroniclesofww2.features.*
+import com.kursor.chroniclesofww2.game.GameDataWaiting
+import com.kursor.chroniclesofww2.game.GameSession
 import com.kursor.chroniclesofww2.model.serializable.GameData
 import kotlin.random.Random
 
@@ -25,6 +25,10 @@ class GameManager {
                 message = GameFeaturesMessages.NO_GAME_WITH_SUCH_ID,
                 gameData = null
             )
+        if (gameDataWaiting.password != joinGameReceiveDTO.password) return JoinGameResponseDTO(
+            message = GameFeaturesMessages.INVALID_PASSWORD,
+            gameData = null
+        )
         val gameSession = createGameSession(gameDataWaiting, joinGameReceiveDTO).apply {
             listener = object : GameSession.Listener {
                 override suspend fun onGameSessionStopped(gameSession: GameSession) {

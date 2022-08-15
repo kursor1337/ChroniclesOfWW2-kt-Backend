@@ -1,6 +1,6 @@
-package com.kursor.chroniclesofww2.game.entities
+package com.kursor.chroniclesofww2.game
 
-import com.kursor.chroniclesofww2.game.GameFeaturesMessages
+import com.kursor.chroniclesofww2.features.GameFeaturesMessages
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.model.game.Model
 import com.kursor.chroniclesofww2.model.game.RuleManager

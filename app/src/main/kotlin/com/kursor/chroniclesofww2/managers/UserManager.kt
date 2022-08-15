@@ -37,7 +37,7 @@ class UserManager(val userRepository: UserRepository) {
             .withClaim("login", user.login)
             .sign(Algorithm.HMAC256(JWT_SECRET))
 
-        return LoginResponseDTO(token = token)
+        return LoginResponseDTO(token = token, message = SUCCESS)
     }
 
     suspend fun updateUserInfo(login: String, newUserInfo: UserInfo): UpdateUserInfoResponseDTO {
@@ -72,6 +72,6 @@ class UserManager(val userRepository: UserRepository) {
         val user = User(registerReceiveDTO.login, registerReceiveDTO.username, passwordHash)
         userRepository.saveUser(user)
         val token = TokenManager.generateToken(user)
-        return RegisterResponseDTO(token = token)
+        return RegisterResponseDTO(token = token, message = SUCCESS)
     }
 }
