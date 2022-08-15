@@ -14,9 +14,9 @@ import org.jetbrains.exposed.sql.transactions.transaction
 const val DB_NAME = "Chronicles Of WW2"
 const val DB_PORT = 5432
 
-class DB {
+object DB {
 
-    init {
+    fun init() {
         Database.connect(hikari())
     }
 
@@ -33,13 +33,12 @@ class DB {
         return HikariDataSource(config)
     }
 
-    companion object {
-        suspend fun <T> query(block: () -> T): T =
-            withContext(Dispatchers.IO) {
-                transaction {
-                    addLogger(StdOutSqlLogger)
-                    block()
-                }
+    suspend fun <T> query(block: () -> T): T =
+        withContext(Dispatchers.IO) {
+            transaction {
+                addLogger(StdOutSqlLogger)
+                block()
             }
-    }
+        }
+
 }

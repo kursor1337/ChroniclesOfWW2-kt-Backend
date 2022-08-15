@@ -32,12 +32,10 @@ class App {
             install(Koin) {
                 modules(appModule, dataModule)
             }
-
-            val db = get<DB>()
+            DB.init()
             application = this
             configureSockets()
             configureSerialization()
-            configureSecurity()
             configureRouting()
             configureAuthentication()
         }.start(wait = true)

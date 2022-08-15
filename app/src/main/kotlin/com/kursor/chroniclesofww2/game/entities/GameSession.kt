@@ -23,7 +23,8 @@ class GameSession(
     private val initiatorPlayer = initiatorGameData.me
     private val connectedPlayer = initiatorGameData.enemy
 
-    private val ruleManager = RuleManager(Model(initiatorGameData))
+    private val model = Model(initiatorGameData)
+    private val ruleManager = RuleManager(model)
 
     private var initiatorClient: Client? = null
     private var connectedClient: Client? = null
@@ -46,6 +47,10 @@ class GameSession(
                     return@MessageHandler
                 }
                 otherClient.webSocketSession.send(message)
+                when (move.type) {
+                    Move.Type.ADD -> model.handleAddMove(move as AddMove)
+                    Move.Type.MOTION -> model.handleMotionMove(move as MotionMove)
+                }
             }
             GameSessionMessageType.DISCONNECT -> {
                 otherClient.webSocketSession.send(GameFeaturesMessages.OTHER_PLAYER_DISCONNECTED)
