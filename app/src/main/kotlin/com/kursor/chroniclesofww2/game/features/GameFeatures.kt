@@ -41,4 +41,6 @@ object GameFeaturesMessages {
     const val USER_CONNECTED = "User connected"
     const val INVALID_MOVE = "Invalid move"
     const val NO_SUCH_PLAYER = "No such player"
+    const val GAME_STARTED = "game_started"
+    const val OTHER_PLAYER_DISCONNECTED = "Other player disconnected"
 }

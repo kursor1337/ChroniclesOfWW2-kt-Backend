@@ -25,12 +25,22 @@ class GameManager {
                 message = GameFeaturesMessages.NO_GAME_WITH_SUCH_ID,
                 gameData = null
             )
-        val gameSession = createGameSession(gameDataWaiting, joinGameReceiveDTO)
+        val gameSession = createGameSession(gameDataWaiting, joinGameReceiveDTO).apply {
+            listener = object : GameSession.Listener {
+                override suspend fun onGameSessionStopped(gameSession: GameSession) {
+                    stopGameSession(gameSession)
+                }
+            }
+        }
         GameController.gameInitialized(gameSession)
         return JoinGameResponseDTO(
             message = GameFeaturesMessages.SUCCESS,
             gameData = gameSession.initiatorGameData.getVersionForAnotherPlayer()
         )
+    }
+
+    suspend fun stopGameSession(gameSession: GameSession) {
+        GameController.gameStopped(gameSession)
     }
 
     fun getGameSessionById(id: Int): GameSession? = GameController.getCurrentGameSessions()[id]
@@ -69,8 +79,9 @@ class GameManager {
     }
 
     interface GameControllerObserver {
-        suspend fun onGameSessionInitialized(gameSession: GameSession)
-        suspend fun onWaitingGameCreated(gameDataWaiting: GameDataWaiting)
+        suspend fun onGameSessionInitialized(gameSession: GameSession) {}
+        suspend fun onWaitingGameCreated(gameDataWaiting: GameDataWaiting) {}
+        suspend fun onGameSessionStopped(gameSession: GameSession) {}
     }
 
     private object GameController {
@@ -88,6 +99,11 @@ class GameManager {
             currentGameSessions[gameSession.id] = gameSession
             waitingGames.remove(gameSession.id)
             observers.forEach { it.onGameSessionInitialized(gameSession) }
+        }
+
+        suspend fun gameStopped(gameSession: GameSession) {
+            currentGameSessions.remove(gameSession.id)
+            observers.forEach { it.onGameSessionStopped(gameSession) }
         }
 
         fun getCurrentGameSessions(): Map<Int, GameSession> = currentGameSessions

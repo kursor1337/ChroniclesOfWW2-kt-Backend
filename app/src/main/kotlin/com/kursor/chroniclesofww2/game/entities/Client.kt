@@ -8,4 +8,5 @@ data class Client(
     val player: Player,
     val webSocketSession: DefaultWebSocketServerSession
 ) {
+
 }

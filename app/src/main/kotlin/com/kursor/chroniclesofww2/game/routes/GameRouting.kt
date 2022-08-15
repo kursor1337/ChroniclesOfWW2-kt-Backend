@@ -6,6 +6,7 @@ import com.kursor.chroniclesofww2.game.GameFeaturesMessages
 import com.kursor.chroniclesofww2.game.JoinGameReceiveDTO
 import com.kursor.chroniclesofww2.game.entities.GameDataWaiting
 import com.kursor.chroniclesofww2.game.entities.GameSession
+import com.kursor.chroniclesofww2.game.entities.GameSessionReceiveDTO
 import com.kursor.chroniclesofww2.game.managers.GameManager
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -15,6 +16,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 fun Application.gameRouting(gameManager: GameManager) {
     routing {
@@ -68,7 +71,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                     }
 
 
-                    var received = incoming.receive()
+                    val received = incoming.receive()
                     if (received !is Frame.Text) {
                         close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Must've sent valid id"))
                     }
@@ -80,22 +83,29 @@ fun Application.gameRouting(gameManager: GameManager) {
                         close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, GameFeaturesMessages.NO_GAME_WITH_SUCH_ID))
                         return@webSocket
                     }
-                    gameSession.start(login, this)
+                    gameSession.initClient(login, this)
+
+                    for (frame in incoming) {
+                        if (frame !is Frame.Text) continue
+                        val receiveDTO = Json.decodeFromString<GameSessionReceiveDTO>(frame.readText())
+                        gameSession.messageHandler.onPlayerMessage(login, receiveDTO)
+                    }
                 }
 
+                post("/create") {
+                    val createGameReceiveDTO = call.receive<CreateGameReceiveDTO>()
+                    val response = gameManager.createGame(createGameReceiveDTO)
+                    call.respond(response)
+                }
+
+                post("/join") {
+                    val joinGameReceiveDTO = call.receive<JoinGameReceiveDTO>()
+                    val response = gameManager.initGameSession(joinGameReceiveDTO)
+                    call.respond(response)
+                }
             }
 
-            webSocket("/create") {
-                val createGameReceiveDTO = call.receive<CreateGameReceiveDTO>()
-                val response = gameManager.createGame(createGameReceiveDTO)
-                call.respond(response)
-            }
 
-            webSocket("/join") {
-                val joinGameReceiveDTO = call.receive<JoinGameReceiveDTO>()
-                val response = gameManager.initGameSession(joinGameReceiveDTO)
-                call.respond(response)
-            }
         }
     }
 }
