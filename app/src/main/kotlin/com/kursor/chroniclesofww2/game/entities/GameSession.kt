@@ -12,8 +12,6 @@ import com.kursor.chroniclesofww2.model.serializable.Player
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 
 
 //player 1 always initiator , it is a host of the game
@@ -22,18 +20,16 @@ class GameSession(
     val initiatorGameData: GameData,
 ) {
 
-    val initiatorPlayer = initiatorGameData.me
-    val connectedPlayer = initiatorGameData.enemy
+    private val initiatorPlayer = initiatorGameData.me
+    private val connectedPlayer = initiatorGameData.enemy
 
-    val ruleManager = RuleManager(Model(initiatorGameData))
+    private val ruleManager = RuleManager(Model(initiatorGameData))
 
-    private var _initiatorClient: Client? = null
-    private var _connectedClient: Client? = null
+    private var initiatorClient: Client? = null
+    private var connectedClient: Client? = null
 
-    val initiatorClient: Client
-        get() = _initiatorClient!!
-    val connectedClient: Client
-        get() = _connectedClient!!
+    val clientsInitialized: Boolean
+        get() = initiatorClient != null && connectedClient != null
 
     var gameStarted: Boolean = false
 
@@ -68,19 +64,18 @@ class GameSession(
     }
 
     private fun getClientWithLogin(login: String): Client? = when (login) {
-        initiatorClient.player.name -> initiatorClient
-        connectedClient.player.name -> connectedClient
+        initiatorClient?.player?.name -> initiatorClient
+        connectedClient?.player?.name -> connectedClient
         else -> null
     }
 
     private fun getOtherClientForLogin(login: String): Client? = when (login) {
-        initiatorClient.player.name -> connectedClient
-        connectedClient.player.name -> initiatorClient
+        initiatorClient?.player?.name -> connectedClient
+        connectedClient?.player?.name -> initiatorClient
         else -> null
     }
 
     suspend fun initClient(login: String, webSocketServerSession: DefaultWebSocketServerSession) {
-
         val player = getPlayerWithName(login)
         if (player == null) {
             webSocketServerSession.close(
@@ -91,19 +86,23 @@ class GameSession(
             )
             return
         }
-        if (player.name == initiatorPlayer.name) {
-            _initiatorClient = Client(initiatorPlayer, webSocketServerSession)
 
-        } else {
-            _connectedClient = Client(connectedPlayer, webSocketServerSession)
-        }
+        setClient(Client(player, webSocketServerSession))
+        start()
 
     }
 
+    fun setClient(client: Client) {
+        when {
+            client.player.name != initiatorClient?.player?.name -> initiatorClient = client
+            client.player.name != connectedClient?.player?.name -> connectedClient = client
+        }
+    }
+
     suspend fun start() {
-        if (_connectedClient == null || _initiatorClient == null) return
-        initiatorClient.webSocketSession.send(Frame.Text(GameFeaturesMessages.GAME_STARTED))
-        connectedClient.webSocketSession.send(Frame.Text(GameFeaturesMessages.GAME_STARTED))
+        if (!clientsInitialized) return
+        initiatorClient!!.webSocketSession.send(GameFeaturesMessages.GAME_STARTED)
+        connectedClient!!.webSocketSession.send(GameFeaturesMessages.GAME_STARTED)
         listener?.onGameSessionStarted(this)
         gameStarted = true
     }
