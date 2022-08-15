@@ -1,7 +1,9 @@
 package com.kursor.chroniclesofww2.game.routes
 
 import com.kursor.chroniclesofww2.AUTH_JWT
-import com.kursor.chroniclesofww2.game.*
+import com.kursor.chroniclesofww2.game.CreateGameReceiveDTO
+import com.kursor.chroniclesofww2.game.GameFeaturesMessages
+import com.kursor.chroniclesofww2.game.JoinGameReceiveDTO
 import com.kursor.chroniclesofww2.game.entities.GameDataWaiting
 import com.kursor.chroniclesofww2.game.entities.GameSession
 import com.kursor.chroniclesofww2.game.managers.GameManager
@@ -13,8 +15,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.json.Json
 
 fun Application.gameRouting(gameManager: GameManager) {
     routing {
@@ -22,7 +22,7 @@ fun Application.gameRouting(gameManager: GameManager) {
 
             authenticate(AUTH_JWT) {
 
-                webSocket("/waiting room") {
+                webSocket("/waiting_room") {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString()
                     if (login == null) {
@@ -47,46 +47,54 @@ fun Application.gameRouting(gameManager: GameManager) {
                         send(Frame.Text(GameFeaturesMessages.WAITING_FOR_CONNECTIONS))
                     }
 
-
                     val gamesObserver = object : GameManager.GameControllerObserver {
                         override suspend fun onGameSessionInitialized(gameSession: GameSession) {
-                            send(Frame.Text(GameFeaturesMessages.USER_CONNECTED)
+                            send(Frame.Text(GameFeaturesMessages.USER_CONNECTED))
+                            gameManager.stopObservingGames(this)
+                            close()
                         }
+
                         override suspend fun onWaitingGameCreated(gameDataWaiting: GameDataWaiting) {}
                     }
                     gameManager.startObservingGames(gamesObserver)
+                }
 
-
-
-
-                    webSocket("/session") {
-                        val gameSession = gameManager.getGameSessionById(gameId)
-                        for (frame in incoming) {
-                            if (frame !is Frame.Text) continue
-                            text = frame.readText()
-                            val (type, message) = Json.decodeFromString<WebSocketReceiveDTO>(text)
-                            when (type) {
-                                WebSocketMessageType.CONNECT -> {
-                                    val gameId = message.toInt()
-
-                                }
-                            }
-                        }
+                webSocket("/session") {
+                    val principal = call.principal<JWTPrincipal>()
+                    val login = principal?.payload?.getClaim("login")?.asString()
+                    if (login == null) {
+                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Not authenticated"))
+                        return@webSocket
                     }
 
+
+                    var received = incoming.receive()
+                    if (received !is Frame.Text) {
+                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Must've sent valid id"))
+                    }
+                    val gameId = (received as Frame.Text).readText().toInt()
+
+                    val gameSession = gameManager.getGameSessionById(gameId)
+                    val player = gameSession?.getPlayerWithName(login)
+                    if (player == null) {
+                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, GameFeaturesMessages.NO_GAME_WITH_SUCH_ID))
+                        return@webSocket
+                    }
+                    gameSession.start(login, this)
                 }
 
-                webSocket("/create") {
-                    val createGameReceiveDTO = call.receive<CreateGameReceiveDTO>()
-                    val response = gameManager.createGame(createGameReceiveDTO)
-                    call.respond(response)
-                }
+            }
 
-                webSocket("/join") {
-                    val joinGameReceiveDTO = call.receive<JoinGameReceiveDTO>()
-                    val response = gameManager.initGameSession(joinGameReceiveDTO)
-                    call.respond(response)
-                }
+            webSocket("/create") {
+                val createGameReceiveDTO = call.receive<CreateGameReceiveDTO>()
+                val response = gameManager.createGame(createGameReceiveDTO)
+                call.respond(response)
+            }
+
+            webSocket("/join") {
+                val joinGameReceiveDTO = call.receive<JoinGameReceiveDTO>()
+                val response = gameManager.initGameSession(joinGameReceiveDTO)
+                call.respond(response)
             }
         }
     }
