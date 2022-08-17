@@ -18,14 +18,14 @@ import io.ktor.server.routing.*
 fun Application.userRouting(userManager: UserManager) {
     val TAG = "userRouting"
     routing {
-        route("/users") {
-            get {
+        route(Routes.Users.relativePath) {
+            get("/${Routes.Users.GET_ALL.node}") {
                 Log.d(TAG, "GET: getting list of users")
-                val userInfoResponseList = userManager.getAllUsers().map { UserInfo(it.username) }
+                val userInfoResponseList = userManager.getAllUsers().map { it.userInfo() }
                 call.respond(userInfoResponseList)
             }
 
-            get("/{login}") {
+            get("/${Routes.Users.GET_ALL}/{login}") {
                 val login = call.parameters["login"] ?: return@get
                 Log.d(TAG, "GET: $login")
                 val user = userManager.getUserByLogin(login = login)
@@ -35,7 +35,7 @@ fun Application.userRouting(userManager: UserManager) {
             }
 
             authenticate(AUTH_JWT) {
-                put("/change_password") {
+                put("/${Routes.Users.CHANGE_PASSWORD.node}") {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
                     val changePasswordReceiveDTO = call.receive<ChangePasswordReceiveDTO>()
@@ -43,7 +43,7 @@ fun Application.userRouting(userManager: UserManager) {
                     call.respond(response)
                 }
 
-                put("/update_userinfo") {
+                put("/${Routes.Users.UPDATE_USER_INFO.node}") {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
                     val updateUserInfoReceiveDTO = call.receive<UpdateUserInfoReceiveDTO>()
@@ -51,12 +51,12 @@ fun Application.userRouting(userManager: UserManager) {
                     call.respond(response)
                 }
 
-                post("/auth") {
+                post("/${Routes.Users.AUTH.node}") {
                     call.respond(HttpStatusCode.OK, "Authorized")
                 }
             }
 
-            post("/register") {
+            post("/${Routes.Users.REGISTER.node}") {
                 val registerReceiveDTO = call.receive<RegisterReceiveDTO>()
                 val respond = userManager.registerUser(registerReceiveDTO)
                 val statusCode = when (respond.message) {
@@ -67,7 +67,7 @@ fun Application.userRouting(userManager: UserManager) {
                 call.respond(statusCode, respond)
             }
 
-            post("/login") {
+            post("/${Routes.Users.LOGIN.node}") {
                 val loginReceiveDTO = call.receive<LoginReceiveDTO>()
                 val respond = userManager.loginUser(loginReceiveDTO)
                 val statusCode = when (respond.message) {

@@ -1,6 +1,8 @@
 package com.kursor.chroniclesofww2.game
 
 import com.kursor.chroniclesofww2.features.GameFeaturesMessages
+import com.kursor.chroniclesofww2.features.GameFeaturesMessages.INVALID_MOVE
+import com.kursor.chroniclesofww2.game.GameSession.MessageHandler
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.model.game.Model
 import com.kursor.chroniclesofww2.model.game.RuleManager
@@ -11,6 +13,7 @@ import com.kursor.chroniclesofww2.model.serializable.GameData
 import com.kursor.chroniclesofww2.model.serializable.Player
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 
 
@@ -29,6 +32,7 @@ class GameSession(
     private var initiatorClient: Client? = null
     private var connectedClient: Client? = null
 
+
     val clientsInitialized: Boolean
         get() = initiatorClient != null && connectedClient != null
 
@@ -43,24 +47,58 @@ class GameSession(
             GameSessionMessageType.MOVE -> {
                 val move = Move.decodeFromStringToSimplified(message).restore(ruleManager.model)
                 if (!ruleManager.checkMoveForValidity(move)) {
-                    client.webSocketSession.send(GameFeaturesMessages.INVALID_MOVE)
+                    client.send(
+                        gameSessionDTO = GameSessionDTO(
+                            type = GameSessionMessageType.ERROR,
+                            message = INVALID_MOVE
+                        )
+                    )
                     return@MessageHandler
                 }
-                otherClient.webSocketSession.send(message)
+                otherClient.send(receiveDTO)
                 when (move.type) {
                     Move.Type.ADD -> model.handleAddMove(move as AddMove)
                     Move.Type.MOTION -> model.handleMotionMove(move as MotionMove)
                 }
             }
             GameSessionMessageType.DISCONNECT -> {
-                otherClient.webSocketSession.send(GameFeaturesMessages.OTHER_PLAYER_DISCONNECTED)
-                listener?.onGameSessionStopped(this)
+                otherClient.send(
+                    GameSessionDTO(
+                        type = GameSessionMessageType.DISCONNECT,
+                        GameFeaturesMessages.OTHER_PLAYER_DISCONNECTED
+                    )
+                )
+
+                stopSession()
             }
             else -> Log.i(TAG, "$type:$message")
         }
     }
 
     var listener: Listener? = null
+
+    suspend fun stopSession() {
+        initiatorClient?.send(
+            GameSessionDTO(
+                type = GameSessionMessageType.ERROR,
+                message = ""
+            )
+        )
+        connectedClient?.send(
+            GameSessionDTO(
+                type = GameSessionMessageType.ERROR,
+                message = ""
+            )
+        )
+        listener?.onGameSessionStopped(this)
+    }
+
+    suspend fun startTimeoutTimer() {
+        delay(TIMEOUT)
+        if (!clientsInitialized) {
+            stopSession()
+        }
+    }
 
     fun getPlayerWithName(name: String): Player? = when (name) {
         initiatorPlayer.name -> initiatorPlayer
@@ -106,8 +144,18 @@ class GameSession(
 
     suspend fun start() {
         if (!clientsInitialized) return
-        initiatorClient!!.webSocketSession.send(GameFeaturesMessages.GAME_STARTED)
-        connectedClient!!.webSocketSession.send(GameFeaturesMessages.GAME_STARTED)
+        initiatorClient!!.send(
+            GameSessionDTO(
+                type = GameSessionMessageType.GAME_EVENT,
+                message = GameFeaturesMessages.GAME_STARTED
+            )
+        )
+        connectedClient!!.send(
+            GameSessionDTO(
+                type = GameSessionMessageType.GAME_EVENT,
+                message = GameFeaturesMessages.GAME_STARTED
+            )
+        )
         listener?.onGameSessionStarted(this)
         gameStarted = true
     }
@@ -138,11 +186,12 @@ class GameSession(
 
     companion object {
         const val TAG = "GameSession"
+        const val TIMEOUT = 3600L
     }
 
 
     fun interface MessageHandler {
-        suspend fun onPlayerMessage(login: String, gameSessionReceiveDTO: GameSessionReceiveDTO)
+        suspend fun onPlayerMessage(login: String, gameSessionDTO: GameSessionDTO)
     }
 
     interface Listener {
@@ -154,13 +203,18 @@ class GameSession(
 
 
 @Serializable
-data class GameSessionReceiveDTO(
+data class GameSessionDTO(
     val type: GameSessionMessageType,
     val message: String
 )
 
+
 enum class GameSessionMessageType {
 
-    CONNECT, DISCONNECT, MOVE, ERROR
+    CONNECT,
+    DISCONNECT,
+    GAME_EVENT,
+    MOVE,
+    ERROR,
 
 }

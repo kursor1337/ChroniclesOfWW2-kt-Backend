@@ -35,6 +35,7 @@ class GameManager {
                     stopGameSession(gameSession)
                 }
             }
+            startTimeoutTimer()
         }
         GameController.gameInitialized(gameSession)
         return JoinGameResponseDTO(

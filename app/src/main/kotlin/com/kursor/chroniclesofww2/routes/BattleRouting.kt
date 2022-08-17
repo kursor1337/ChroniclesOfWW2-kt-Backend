@@ -3,6 +3,7 @@ package com.kursor.chroniclesofww2.routes
 import com.kursor.chroniclesofww2.AUTH_JWT
 import com.kursor.chroniclesofww2.features.DeleteBattleReceiveDTO
 import com.kursor.chroniclesofww2.features.EditBattleReceiveDTO
+import com.kursor.chroniclesofww2.features.Routes
 import com.kursor.chroniclesofww2.features.SaveBattleReceiveDTO
 import com.kursor.chroniclesofww2.managers.BattleManager
 import io.ktor.http.*
@@ -15,13 +16,13 @@ import io.ktor.server.routing.*
 
 fun Application.battleRouting(battleManager: BattleManager) {
     routing {
-        route("/battles") {
+        route(Routes.Battles.relativePath) {
             authenticate(AUTH_JWT) {
-                get {
+                get("/${Routes.Battles.GET_ALL.node}") {
                     call.respond(battleManager.getAllBattles())
                 }
 
-                get("/{id}") {
+                get("/${Routes.Battles.GET_ALL.node}/{id}") {
                     val id = call.parameters["id"]?.toInt() ?: return@get
                     val battle = battleManager.getBattleById(id)
                     if (battle == null) {
@@ -31,13 +32,13 @@ fun Application.battleRouting(battleManager: BattleManager) {
                     call.respond(HttpStatusCode.OK, battle)
                 }
 
-                get("/my") {
+                get("/${Routes.Battles.MY.node}") {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@get
                     call.respond(battleManager.getBattlesOfUser(login))
                 }
 
-                post("/create") {
+                post("/${Routes.Battles.SAVE.node}") {
                     val saveBattleReceiveDTO = call.receive<SaveBattleReceiveDTO>()
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@post
@@ -45,7 +46,7 @@ fun Application.battleRouting(battleManager: BattleManager) {
                     call.respond(response)
                 }
 
-                put("/update") {
+                put("/${Routes.Battles.UPDATE.node}") {
                     val editBattleReceiveDTO = call.receive<EditBattleReceiveDTO>()
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
@@ -53,7 +54,7 @@ fun Application.battleRouting(battleManager: BattleManager) {
                     call.respond(response)
                 }
 
-                delete("/delete") {
+                delete("/${Routes.Battles.DELETE.node}") {
                     val deleteBattleReceiveDTO = call.receive<DeleteBattleReceiveDTO>()
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@delete

@@ -1,3 +1,5 @@
+val model_version: String by project
+
 val postgres_version: String by project
 val ktor_version: String by project
 val kotlin_version: String by project
@@ -52,5 +54,9 @@ dependencies {
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktor_version")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
-    implementation("com.github.kursor1337:chronicles-of-ww2-kt-model:0.2")
+    implementation("com.github.kursor1337:chronicles-of-ww2-kt-model:$model_version")
+}
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor(0, "seconds")
 }

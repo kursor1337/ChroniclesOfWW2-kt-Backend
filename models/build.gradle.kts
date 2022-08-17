@@ -3,7 +3,7 @@ val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
 val exposedVersion: String by project
-
+val model_version: String by project
 
 plugins {
     application
@@ -36,5 +36,9 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.7.0")
     testRuntimeOnly ("org.junit.jupiter:junit-jupiter-engine:5.7.0")
 
-    implementation("com.github.kursor1337:chronicles-of-ww2-kt-model:0.2")
+    implementation("com.github.kursor1337:chronicles-of-ww2-kt-model:$model_version")
+}
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor(0, "seconds")
 }

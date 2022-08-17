@@ -4,9 +4,10 @@ import com.kursor.chroniclesofww2.AUTH_JWT
 import com.kursor.chroniclesofww2.features.CreateGameReceiveDTO
 import com.kursor.chroniclesofww2.features.GameFeaturesMessages
 import com.kursor.chroniclesofww2.features.JoinGameReceiveDTO
+import com.kursor.chroniclesofww2.features.Routes
 import com.kursor.chroniclesofww2.game.GameDataWaiting
 import com.kursor.chroniclesofww2.game.GameSession
-import com.kursor.chroniclesofww2.game.GameSessionReceiveDTO
+import com.kursor.chroniclesofww2.game.GameSessionDTO
 import com.kursor.chroniclesofww2.managers.GameManager
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -21,11 +22,11 @@ import kotlinx.serialization.json.Json
 
 fun Application.gameRouting(gameManager: GameManager) {
     routing {
-        route("/game") {
+        route(Routes.Game.relativePath) {
 
             authenticate(AUTH_JWT) {
 
-                webSocket("/waiting_room") {
+                webSocket("/${Routes.Game.WAITING_ROOM.node}") {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString()
                     if (login == null) {
@@ -62,7 +63,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                     gameManager.startObservingGames(gamesObserver)
                 }
 
-                webSocket("/session") {
+                webSocket("/${Routes.Game.SESSION.node}") {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString()
                     if (login == null) {
@@ -87,18 +88,18 @@ fun Application.gameRouting(gameManager: GameManager) {
 
                     for (frame in incoming) {
                         if (frame !is Frame.Text) continue
-                        val receiveDTO = Json.decodeFromString<GameSessionReceiveDTO>(frame.readText())
+                        val receiveDTO = Json.decodeFromString<GameSessionDTO>(frame.readText())
                         gameSession.messageHandler.onPlayerMessage(login, receiveDTO)
                     }
                 }
 
-                post("/create") {
+                post("/${Routes.Game.CREATE.node}") {
                     val createGameReceiveDTO = call.receive<CreateGameReceiveDTO>()
                     val response = gameManager.createGame(createGameReceiveDTO)
                     call.respond(response)
                 }
 
-                post("/join") {
+                post("/${Routes.Game.JOIN.node}") {
                     val joinGameReceiveDTO = call.receive<JoinGameReceiveDTO>()
                     val response = gameManager.initGameSession(joinGameReceiveDTO)
                     call.respond(response)
