@@ -21,7 +21,7 @@ object Log {
         if (!logFolder.exists()) {
             logFolder.mkdir()
         }
-        logFileName = "log-${System.currentTimeMillis()}.txt"
+        logFileName = "log-${getTimeDateForName()}.txt"
         file = FileOutputStream("logs/$logFileName")
         writer = file.writer()
     }
@@ -59,6 +59,8 @@ object Log {
     }
 
     private fun getTimeDate(): String = SimpleDateFormat("yyyy-MM-dd hh:mm:ss").format(Date())
+
+    private fun getTimeDateForName() = SimpleDateFormat("yyyy-MM-dd hh-mm-ss").format(Date())
 
     fun onDestroy() {
         writer.close()

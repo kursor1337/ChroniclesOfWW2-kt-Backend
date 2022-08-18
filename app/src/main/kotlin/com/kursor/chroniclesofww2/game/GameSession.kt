@@ -186,7 +186,7 @@ class GameSession(
 
     companion object {
         const val TAG = "GameSession"
-        const val TIMEOUT = 3600L
+        const val TIMEOUT = 60000L
     }
 
 

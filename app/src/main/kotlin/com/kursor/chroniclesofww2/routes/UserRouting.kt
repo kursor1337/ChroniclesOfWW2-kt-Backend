@@ -34,28 +34,6 @@ fun Application.userRouting(userManager: UserManager) {
                 } else call.respond(HttpStatusCode.OK, user.userInfo())
             }
 
-            authenticate(AUTH_JWT) {
-                put("/${Routes.Users.CHANGE_PASSWORD.node}") {
-                    val principal = call.principal<JWTPrincipal>()
-                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
-                    val changePasswordReceiveDTO = call.receive<ChangePasswordReceiveDTO>()
-                    val response = userManager.changePasswordForUser(login, changePasswordReceiveDTO.newPassword)
-                    call.respond(response)
-                }
-
-                put("/${Routes.Users.UPDATE_USER_INFO.node}") {
-                    val principal = call.principal<JWTPrincipal>()
-                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
-                    val updateUserInfoReceiveDTO = call.receive<UpdateUserInfoReceiveDTO>()
-                    val response = userManager.updateUserInfo(login, updateUserInfoReceiveDTO.updatedUserInfo)
-                    call.respond(response)
-                }
-
-                post("/${Routes.Users.AUTH.node}") {
-                    call.respond(HttpStatusCode.OK, "Authorized")
-                }
-            }
-
             post("/${Routes.Users.REGISTER.node}") {
                 val registerReceiveDTO = call.receive<RegisterReceiveDTO>()
                 val respond = userManager.registerUser(registerReceiveDTO)
