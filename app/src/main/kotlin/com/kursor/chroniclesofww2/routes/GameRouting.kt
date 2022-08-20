@@ -1,14 +1,11 @@
 package com.kursor.chroniclesofww2.routes
 
 import com.kursor.chroniclesofww2.AUTH_JWT
-import com.kursor.chroniclesofww2.features.CreateGameReceiveDTO
-import com.kursor.chroniclesofww2.features.GameFeaturesMessages
-import com.kursor.chroniclesofww2.features.JoinGameReceiveDTO
-import com.kursor.chroniclesofww2.features.Routes
-import com.kursor.chroniclesofww2.game.GameDataWaiting
+import com.kursor.chroniclesofww2.features.*
+import com.kursor.chroniclesofww2.game.WaitingGame
 import com.kursor.chroniclesofww2.game.GameSession
-import com.kursor.chroniclesofww2.game.GameSessionDTO
 import com.kursor.chroniclesofww2.managers.GameManager
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -18,6 +15,7 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 fun Application.gameRouting(gameManager: GameManager) {
@@ -25,43 +23,6 @@ fun Application.gameRouting(gameManager: GameManager) {
         route(Routes.Game.relativePath) {
 
             authenticate(AUTH_JWT) {
-
-                webSocket("/${Routes.Game.WAITING_ROOM.node}") {
-                    val principal = call.principal<JWTPrincipal>()
-                    val login = principal?.payload?.getClaim("login")?.asString()
-                    if (login == null) {
-                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Not authenticated"))
-                        return@webSocket
-                    }
-
-
-                    var received = incoming.receive()
-                    if (received !is Frame.Text) {
-                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Must've sent valid id"))
-                    }
-                    val gameId = (received as Frame.Text).readText().toInt()
-
-                    //if there is such game that still waits for connected user then wait
-                    val gameDataWaiting = gameManager.getWaitingGameById(gameId)
-                    if (gameDataWaiting != null) {
-                        if (gameDataWaiting.initiatorLogin != login) {
-                            close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Not initiator"))
-                            return@webSocket
-                        }
-                        send(Frame.Text(GameFeaturesMessages.WAITING_FOR_CONNECTIONS))
-                    }
-
-                    val gamesObserver = object : GameManager.GameControllerObserver {
-                        override suspend fun onGameSessionInitialized(gameSession: GameSession) {
-                            send(Frame.Text(GameFeaturesMessages.USER_CONNECTED))
-                            gameManager.stopObservingGames(this)
-                            close()
-                        }
-
-                        override suspend fun onWaitingGameCreated(gameDataWaiting: GameDataWaiting) {}
-                    }
-                    gameManager.startObservingGames(gamesObserver)
-                }
 
                 webSocket("/${Routes.Game.SESSION.node}") {
                     val principal = call.principal<JWTPrincipal>()
@@ -93,16 +54,66 @@ fun Application.gameRouting(gameManager: GameManager) {
                     }
                 }
 
-                post("/${Routes.Game.CREATE.node}") {
-                    val createGameReceiveDTO = call.receive<CreateGameReceiveDTO>()
-                    val response = gameManager.createGame(createGameReceiveDTO)
+                webSocket ("/${Routes.Game.CREATE.node}") {
+                    val principal = call.principal<JWTPrincipal>()
+                    val login = principal?.payload?.getClaim("login")?.asString()
+                    if (login == null) {
+                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Not authenticated"))
+                        return@webSocket
+                    }
+                    val received = incoming.receive()
+                    if (received !is Frame.Text) {
+                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Must've sent valid string"))
+                    }
+                    val createGameReceiveDTO = Json.decodeFromString<CreateGameReceiveDTO>((received as Frame.Text).readText())
+                    val response = gameManager.createGame(this, createGameReceiveDTO)
+                    send(Json.encodeToString(response))
+
+                    val gameId = response.gameId
+
+                    //if there is such game that still waits for connected user then wait
+                    val gameDataWaiting = gameManager.getWaitingGameById(gameId)
+
+                    send(Frame.Text(GameFeaturesMessages.WAITING_FOR_CONNECTIONS))
+
+
+                    val gamesObserver = object : GameManager.GameControllerObserver {
+                        override suspend fun onGameSessionInitialized(gameSession: GameSession) {
+                            send(GameFeaturesMessages.USER_CONNECTED)
+                            gameManager.stopObservingGames(this)
+                            close()
+                        }
+
+                        override suspend fun onWaitingGameTimedOut(waitingGame: WaitingGame) {
+                            send(GameFeaturesMessages.SESSION_TIMED_OUT)
+                            gameManager.stopObservingGames(this)
+                            close()
+                        }
+                    }
+                    gameManager.startObservingGames(gamesObserver)
                     call.respond(response)
                 }
 
-                post("/${Routes.Game.JOIN.node}") {
+                webSocket ("/${Routes.Game.JOIN.node}") {
+                    val principal = call.principal<JWTPrincipal>()
+                    val login = principal?.payload?.getClaim("login")?.asString()
+                    if (login == null) {
+                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Not authenticated"))
+                        return@webSocket
+                    }
+
+                    val received = incoming.receive()
+                    if (received !is Frame.Text) {
+                        close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Must've sent valid string"))
+                    }
+
                     val joinGameReceiveDTO = call.receive<JoinGameReceiveDTO>()
                     val response = gameManager.initGameSession(joinGameReceiveDTO)
                     call.respond(response)
+                }
+
+                get {
+                    call.respond(HttpStatusCode.OK, gameManager.getCurrentWaitingGamesInfo())
                 }
             }
 

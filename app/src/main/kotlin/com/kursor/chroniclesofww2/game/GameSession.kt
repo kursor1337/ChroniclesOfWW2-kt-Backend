@@ -2,6 +2,8 @@ package com.kursor.chroniclesofww2.game
 
 import com.kursor.chroniclesofww2.features.GameFeaturesMessages
 import com.kursor.chroniclesofww2.features.GameFeaturesMessages.INVALID_MOVE
+import com.kursor.chroniclesofww2.features.GameSessionDTO
+import com.kursor.chroniclesofww2.features.GameSessionMessageType
 import com.kursor.chroniclesofww2.game.GameSession.MessageHandler
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.model.game.Model
@@ -107,14 +109,14 @@ class GameSession(
     }
 
     private fun getClientWithLogin(login: String): Client? = when (login) {
-        initiatorClient?.player?.name -> initiatorClient
-        connectedClient?.player?.name -> connectedClient
+        initiatorClient?.login -> initiatorClient
+        connectedClient?.login -> connectedClient
         else -> null
     }
 
     private fun getOtherClientForLogin(login: String): Client? = when (login) {
-        initiatorClient?.player?.name -> connectedClient
-        connectedClient?.player?.name -> initiatorClient
+        initiatorClient?.login -> connectedClient
+        connectedClient?.login -> initiatorClient
         else -> null
     }
 
@@ -130,15 +132,15 @@ class GameSession(
             return
         }
 
-        setClient(Client(player, webSocketServerSession))
+        setClient(Client(player.name, webSocketServerSession))
         start()
 
     }
 
     fun setClient(client: Client) {
         when {
-            client.player.name != initiatorClient?.player?.name -> initiatorClient = client
-            client.player.name != connectedClient?.player?.name -> connectedClient = client
+            client.login != initiatorClient?.login -> initiatorClient = client
+            client.login != connectedClient?.login -> connectedClient = client
         }
     }
 
@@ -198,23 +200,5 @@ class GameSession(
         suspend fun onGameSessionStarted(gameSession: GameSession) {}
         suspend fun onGameSessionStopped(gameSession: GameSession) {}
     }
-
-}
-
-
-@Serializable
-data class GameSessionDTO(
-    val type: GameSessionMessageType,
-    val message: String
-)
-
-
-enum class GameSessionMessageType {
-
-    CONNECT,
-    DISCONNECT,
-    GAME_EVENT,
-    MOVE,
-    ERROR,
 
 }
