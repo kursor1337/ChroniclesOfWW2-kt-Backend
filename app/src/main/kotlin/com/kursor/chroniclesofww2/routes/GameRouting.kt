@@ -2,6 +2,7 @@ package com.kursor.chroniclesofww2.routes
 
 import com.kursor.chroniclesofww2.AUTH_JWT
 import com.kursor.chroniclesofww2.features.*
+import com.kursor.chroniclesofww2.game.Client
 import com.kursor.chroniclesofww2.game.WaitingGame
 import com.kursor.chroniclesofww2.game.GameSession
 import com.kursor.chroniclesofww2.managers.GameManager
@@ -9,6 +10,7 @@ import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.http.content.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -70,20 +72,14 @@ fun Application.gameRouting(gameManager: GameManager) {
                     send(Json.encodeToString(response))
 
                     val gameId = response.gameId
+                    val waitingGame = gameManager.getWaitingGameById(gameId)!!
 
                     //if there is such game that still waits for connected user then wait
-                    val gameDataWaiting = gameManager.getWaitingGameById(gameId)
 
                     send(Frame.Text(GameFeaturesMessages.WAITING_FOR_CONNECTIONS))
 
 
                     val gamesObserver = object : GameManager.GameControllerObserver {
-                        override suspend fun onGameSessionInitialized(gameSession: GameSession) {
-                            send(GameFeaturesMessages.USER_CONNECTED)
-                            gameManager.stopObservingGames(this)
-                            close()
-                        }
-
                         override suspend fun onWaitingGameTimedOut(waitingGame: WaitingGame) {
                             send(GameFeaturesMessages.SESSION_TIMED_OUT)
                             gameManager.stopObservingGames(this)
@@ -91,7 +87,15 @@ fun Application.gameRouting(gameManager: GameManager) {
                         }
                     }
                     gameManager.startObservingGames(gamesObserver)
-                    call.respond(response)
+
+                    for (frame in incoming) {
+                        if (frame !is Frame.Text) continue
+                        val string = frame.readText()
+                        if (string == GameFeaturesMessages.ACCEPTED || string == GameFeaturesMessages.REJECTED) {
+                            waitingGame.verdict(string)
+                        }
+                        if (string == GameFeaturesMessages.CANCEL_CONNECTION) waitingGame.stop()
+                    }
                 }
 
                 webSocket ("/${Routes.Game.JOIN.node}") {
@@ -107,9 +111,15 @@ fun Application.gameRouting(gameManager: GameManager) {
                         close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Must've sent valid string"))
                     }
 
-                    val joinGameReceiveDTO = call.receive<JoinGameReceiveDTO>()
-                    val response = gameManager.initGameSession(joinGameReceiveDTO)
-                    call.respond(response)
+                    val joinGameReceiveDTO = Json.decodeFromString<JoinGameReceiveDTO>((received as Frame.Text).readText())
+                    val waitingGame = gameManager.getWaitingGameById(joinGameReceiveDTO.gameId)
+                    if (waitingGame == null) {
+                        send(GameFeaturesMessages.NO_GAME_WITH_SUCH_ID)
+                        close()
+                        return@webSocket
+                    }
+                    waitingGame.connectClient(Client(login, this))
+
                 }
 
                 get {

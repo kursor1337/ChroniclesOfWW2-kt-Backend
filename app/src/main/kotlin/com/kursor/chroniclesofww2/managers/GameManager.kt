@@ -60,7 +60,7 @@ class GameManager {
         return GameController.getWaitingGames().map { (id, waitingGame) ->
             WaitingGameInfoDTO(
                 id = waitingGame.id,
-                initiatorLogin = waitingGame.initiatorLogin
+                initiatorLogin = waitingGame.initiator.login
             )
         }
     }
@@ -82,7 +82,7 @@ class GameManager {
         joinGameReceiveDTO: JoinGameReceiveDTO
     ): GameSession {
         val gameData = GameData(
-            waitingGame.initiatorLogin,
+            waitingGame.initiator.login,
             joinGameReceiveDTO.connectedUserLogin,
             waitingGame.battle,
             waitingGame.boardHeight,
