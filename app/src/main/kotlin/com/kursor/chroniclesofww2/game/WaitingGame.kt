@@ -48,7 +48,7 @@ class WaitingGame(
 
     suspend fun connectClient(client: Client) {
         connected = client
-        initiator.send("${GameFeaturesMessages.REQUEST_FOR_ACCEPT}:${client.login}")
+        initiator.send("${GameFeaturesMessages.REQUEST_FOR_ACCEPT}${client.login}")
     }
 
 

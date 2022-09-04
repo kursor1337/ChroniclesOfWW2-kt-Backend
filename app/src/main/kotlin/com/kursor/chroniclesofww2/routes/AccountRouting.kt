@@ -13,7 +13,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Application.accountRoutiing(userManager: UserManager) {
+fun Application.accountRouting(userManager: UserManager) {
     routing {
         route(Routes.Account.relativePath) {
             authenticate(AUTH_JWT) {

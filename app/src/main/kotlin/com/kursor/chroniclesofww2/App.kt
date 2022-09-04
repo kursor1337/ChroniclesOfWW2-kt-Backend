@@ -12,10 +12,11 @@ import com.kursor.chroniclesofww2.plugins.configureSockets
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.websocket.*
 import org.koin.ktor.plugin.Koin
 
 const val PORT = 8080
-const val HOST = "0.0.0.0"
+const val HOST = "192.168.31.197"
 
 class App {
 
@@ -31,6 +32,7 @@ class App {
         Log.i(TAG, "Config loaded. Launching embedded server on localhost on port ${config.port}.")
 
         embeddedServer(Netty, port = config.port, host = HOST) {
+
             install(Koin) {
                 modules(appModule, dataModule)
             }
