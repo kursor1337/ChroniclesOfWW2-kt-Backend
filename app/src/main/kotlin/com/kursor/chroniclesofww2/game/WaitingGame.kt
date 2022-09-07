@@ -7,7 +7,10 @@ import com.kursor.chroniclesofww2.model.serializable.Battle
 import com.kursor.chroniclesofww2.model.serializable.GameData
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.lang.ref.ReferenceQueue
@@ -40,10 +43,10 @@ class WaitingGame(
     var connected: Client? = null
 
     suspend fun startTimeoutTimer() {
-        delay(TIMEOUT)
-        initiator.send(TIMEOUT_MESSAGE)
-        initiator.webSocketSession.close()
-        timeoutListener?.onTimeout(this)
+        CoroutineScope(Dispatchers.IO).launch {
+            delay(TIMEOUT)
+            timeoutListener?.onTimeout(this@WaitingGame)
+        }
     }
 
     suspend fun connectClient(client: Client) {
@@ -86,7 +89,7 @@ class WaitingGame(
     }
 
     companion object {
-        const val TIMEOUT = 300000L
+        const val TIMEOUT = 120000L
         const val TIMEOUT_MESSAGE = "Timeout"
     }
 

@@ -1,8 +1,9 @@
 package com.kursor.chroniclesofww2.managers
 
 import com.kursor.chroniclesofww2.features.*
-import com.kursor.chroniclesofww2.game.WaitingGame
 import com.kursor.chroniclesofww2.game.GameSession
+import com.kursor.chroniclesofww2.game.WaitingGame
+import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.model.serializable.GameData
 import io.ktor.server.websocket.*
 import kotlin.random.Random
@@ -16,11 +17,13 @@ class GameManager {
         webSocketServerSession: DefaultWebSocketServerSession,
         createGameReceiveDTO: CreateGameReceiveDTO
     ): CreateGameResponseDTO {
+        Log.d("GameManager", "createGame: ")
         val id = generateGameId()
         val waitingGame = WaitingGame(id, webSocketServerSession, createGameReceiveDTO).apply {
             timeoutListener = WaitingGame.TimeoutListener {
                 GameController.waitingGameTimedOut(it)
             }
+            startTimeoutTimer()
         }
         GameController.gameCreated(waitingGame)
         return CreateGameResponseDTO(gameId = id)
@@ -74,7 +77,7 @@ class GameManager {
     }
 
     fun stopObservingGames(observer: GameControllerObserver) {
-        GameController.observers.remove(observer)
+        GameController.observersToRemove.add(observer)
     }
 
     private fun createGameSession(
@@ -115,26 +118,31 @@ class GameManager {
         private val currentGameSessions = mutableMapOf<Int, GameSession>()
         private val waitingGames = mutableMapOf<Int, WaitingGame>()
         val observers = mutableListOf<GameControllerObserver>()
+        val observersToRemove = mutableListOf<GameControllerObserver>()
 
         suspend fun gameCreated(waitingGame: WaitingGame) {
             waitingGames[waitingGame.id] = waitingGame
             observers.forEach { it.onWaitingGameCreated(waitingGame) }
+            observers.removeAll(observersToRemove)
         }
 
         suspend fun gameInitialized(gameSession: GameSession) {
             currentGameSessions[gameSession.id] = gameSession
             waitingGames.remove(gameSession.id)
             observers.forEach { it.onGameSessionInitialized(gameSession) }
+            observers.removeAll(observersToRemove)
         }
 
         suspend fun gameStopped(gameSession: GameSession) {
             currentGameSessions.remove(gameSession.id)
             observers.forEach { it.onGameSessionStopped(gameSession) }
+            observers.removeAll(observersToRemove)
         }
 
         suspend fun waitingGameTimedOut(waitingGame: WaitingGame) {
             waitingGames.remove(waitingGame.id)
             observers.forEach { it.onWaitingGameTimedOut(waitingGame) }
+            observers.removeAll(observersToRemove)
         }
 
         fun getCurrentGameSessions(): Map<Int, GameSession> = currentGameSessions

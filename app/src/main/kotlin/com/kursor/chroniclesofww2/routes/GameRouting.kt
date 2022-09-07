@@ -106,6 +106,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                 }
 
                 val joinGameReceiveDTO = Json.decodeFromString<JoinGameReceiveDTO>((received as Frame.Text).readText())
+
                 val waitingGame = gameManager.getWaitingGameById(joinGameReceiveDTO.gameId)
                 if (waitingGame == null) {
                     send(GameFeaturesMessages.NO_GAME_WITH_SUCH_ID)
@@ -113,10 +114,9 @@ fun Application.gameRouting(gameManager: GameManager) {
                     return@webSocket
                 }
                 waitingGame.connectClient(Client(login, this))
-
             }
 
-            get {
+            get(Routes.Game.relativePath) {
                 call.respond(HttpStatusCode.OK, gameManager.getCurrentWaitingGamesInfo())
             }
         }

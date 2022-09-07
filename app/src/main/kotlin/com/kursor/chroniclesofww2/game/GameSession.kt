@@ -15,7 +15,10 @@ import com.kursor.chroniclesofww2.model.serializable.GameData
 import com.kursor.chroniclesofww2.model.serializable.Player
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 
 
@@ -70,7 +73,6 @@ class GameSession(
                         GameFeaturesMessages.OTHER_PLAYER_DISCONNECTED
                     )
                 )
-
                 stopSession()
             }
             else -> Log.i(TAG, "$type:$message")
@@ -96,10 +98,13 @@ class GameSession(
     }
 
     suspend fun startTimeoutTimer() {
-        delay(TIMEOUT)
-        if (!clientsInitialized) {
-            stopSession()
+        CoroutineScope(Dispatchers.IO).launch {
+            delay(TIMEOUT)
+            if (!clientsInitialized) {
+                stopSession()
+            }
         }
+
     }
 
     fun getPlayerWithName(name: String): Player? = when (name) {
@@ -188,7 +193,7 @@ class GameSession(
 
     companion object {
         const val TAG = "GameSession"
-        const val TIMEOUT = 60000L
+        const val TIMEOUT = 15000L
     }
 
 
