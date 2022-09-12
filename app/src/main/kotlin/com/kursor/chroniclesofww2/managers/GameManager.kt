@@ -60,6 +60,7 @@ class GameManager {
     }
 
     fun getCurrentWaitingGamesInfo(): List<WaitingGameInfoDTO> {
+        Log.d("GameManager", "getCurrentWaitingGamesInfo: ${GameController.getWaitingGames()}")
         return GameController.getWaitingGames().map { (id, waitingGame) ->
             WaitingGameInfoDTO(
                 id = waitingGame.id,

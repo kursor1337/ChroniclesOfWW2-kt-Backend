@@ -16,7 +16,7 @@ import io.ktor.server.websocket.*
 import org.koin.ktor.plugin.Koin
 
 const val PORT = 8080
-const val HOST = "0.0.0.0"
+const val HOST = "192.168.31.197"
 
 class App {
 

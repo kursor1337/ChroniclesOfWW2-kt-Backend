@@ -8,12 +8,14 @@ import java.util.*
 
 object TokenManager {
 
-    private const val LIFETIME = 3_600_000
+    const val TOKEN_LIFETIME = 3_600_000L
 
-    private fun getExpirationDate(): Date = Date(System.currentTimeMillis() + LIFETIME)
+    private fun getExpirationDate(): Date = Date(System.currentTimeMillis() + TOKEN_LIFETIME)
 
-    fun generateToken(user: User): String = JWT.create().withClaim(
-        "login", user.login).withExpiresAt(getExpirationDate()).sign(Algorithm.HMAC256(JWT_SECRET))
+    fun generateToken(user: User): String = generateToken(user)
+
+    fun generateToken(login: String): String = JWT.create().withClaim(
+        "login", login).withExpiresAt(getExpirationDate()).sign(Algorithm.HMAC256(JWT_SECRET))
 
 
 }

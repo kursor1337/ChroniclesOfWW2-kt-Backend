@@ -24,20 +24,41 @@ class UserManager(val userRepository: UserRepository) {
         val user = userRepository.getUserByLogin(loginReceiveDTO.login)
             ?: return LoginResponseDTO(
                 token = null,
+                expiresIn = 0L,
                 message = NO_SUCH_USER
             )
 
         if (!BCrypt.checkpw(loginReceiveDTO.password, user.passwordHash)) {
             return LoginResponseDTO(
                 token = null,
+                expiresIn = 0L,
                 message = INCORRECT_PASSWORD
             )
         }
-        val token = JWT.create()
-            .withClaim("login", user.login)
-            .sign(Algorithm.HMAC256(JWT_SECRET))
+        val token = TokenManager.generateToken(user)
 
-        return LoginResponseDTO(token = token, message = SUCCESS)
+        return LoginResponseDTO(
+            token = token,
+            message = SUCCESS,
+            expiresIn = TokenManager.TOKEN_LIFETIME
+        )
+    }
+
+    suspend fun registerUser(registerReceiveDTO: RegisterReceiveDTO): RegisterResponseDTO {
+        if (userRepository.getUserByLogin(registerReceiveDTO.login) != null) return RegisterResponseDTO(
+            token = null,
+            expiresIn = 0L,
+            message = USER_ALREADY_REGISTERED
+        )
+        val passwordHash = BCrypt.hashpw(registerReceiveDTO.password, BCrypt.gensalt())
+        val user = User(registerReceiveDTO.login, registerReceiveDTO.username, passwordHash)
+        userRepository.saveUser(user)
+        val token = TokenManager.generateToken(user)
+        return RegisterResponseDTO(
+            token = token,
+            expiresIn = 0L,
+            message = SUCCESS
+        )
     }
 
     suspend fun updateUserInfo(login: String, newUserInfo: UserInfo): UpdateUserInfoResponseDTO {
@@ -61,17 +82,5 @@ class UserManager(val userRepository: UserRepository) {
         if (userRepository.getUserByLogin(login) == null) return DeleteUserResponseDTO(NO_SUCH_USER)
         userRepository.deleteUser(login)
         return DeleteUserResponseDTO(message = SUCCESS)
-    }
-
-    suspend fun registerUser(registerReceiveDTO: RegisterReceiveDTO): RegisterResponseDTO {
-        if (userRepository.getUserByLogin(registerReceiveDTO.login) != null) return RegisterResponseDTO(
-            token = null,
-            message = USER_ALREADY_REGISTERED
-        )
-        val passwordHash = BCrypt.hashpw(registerReceiveDTO.password, BCrypt.gensalt())
-        val user = User(registerReceiveDTO.login, registerReceiveDTO.username, passwordHash)
-        userRepository.saveUser(user)
-        val token = TokenManager.generateToken(user)
-        return RegisterResponseDTO(token = token, message = SUCCESS)
     }
 }
