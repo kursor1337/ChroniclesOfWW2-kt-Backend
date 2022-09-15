@@ -80,6 +80,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                         close()
                     }
                 }
+                
                 gameManager.startObservingGames(gamesObserver)
 
                 for (frame in incoming) {
@@ -89,6 +90,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                         waitingGame.verdict(string)
                     }
                     if (string == GameFeaturesMessages.CANCEL_CONNECTION) waitingGame.stop()
+                    waitingGame.messageHandler.onMessage(login, string)
                 }
             }
 

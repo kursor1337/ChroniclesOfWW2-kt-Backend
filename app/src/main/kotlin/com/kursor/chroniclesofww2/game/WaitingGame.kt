@@ -3,6 +3,7 @@ package com.kursor.chroniclesofww2.game
 import com.kursor.chroniclesofww2.features.CreateGameReceiveDTO
 import com.kursor.chroniclesofww2.features.GameFeaturesMessages
 import com.kursor.chroniclesofww2.features.JoinGameResponseDTO
+import com.kursor.chroniclesofww2.game.WaitingGame.MessageHandler
 import com.kursor.chroniclesofww2.model.serializable.Battle
 import com.kursor.chroniclesofww2.model.serializable.GameData
 import io.ktor.server.websocket.*
@@ -13,7 +14,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.lang.ref.ReferenceQueue
 
 class WaitingGame(
     val id: Int,
@@ -25,7 +25,11 @@ class WaitingGame(
     val invertNations: Boolean
 ) {
 
-    constructor(id: Int, webSocketSession: DefaultWebSocketServerSession, createGameReceiveDTO: CreateGameReceiveDTO): this(
+    constructor(
+        id: Int,
+        webSocketSession: DefaultWebSocketServerSession,
+        createGameReceiveDTO: CreateGameReceiveDTO
+    ) : this(
         id,
         initiator = Client(
             createGameReceiveDTO.initiatorLogin,
@@ -42,6 +46,15 @@ class WaitingGame(
 
     var connected: Client? = null
 
+    val messageHandler = MessageHandler { login, message ->
+        when (message) {
+            GameFeaturesMessages.ACCEPTED, GameFeaturesMessages.REJECTED -> {
+                verdict(message)
+            }
+            GameFeaturesMessages.CANCEL_CONNECTION -> stop()
+        }
+    }
+
     suspend fun startTimeoutTimer() {
         CoroutineScope(Dispatchers.IO).launch {
             delay(TIMEOUT)
@@ -56,22 +69,25 @@ class WaitingGame(
 
 
     suspend fun verdict(string: String) {
+        val gameData = if (string == GameFeaturesMessages.ACCEPTED) GameData(
+            myName = initiator.login,
+            enemyName = connected!!.login,
+            battle = battle,
+            boardHeight = boardHeight,
+            boardWidth = boardWidth,
+            invertNations = invertNations
+        ) else null
+
         connected?.send(
             Json.encodeToString(
                 JoinGameResponseDTO(
                     message = string,
-                    gameData = if (string == GameFeaturesMessages.ACCEPTED) GameData(
-                        myName = initiator.login,
-                        enemyName = connected!!.login,
-                        battle = battle,
-                        boardHeight = boardHeight,
-                        boardWidth = boardWidth,
-                        invertNations = invertNations
-                    ).getVersionForAnotherPlayer()
-                else null
+                    gameData = gameData?.getVersionForAnotherPlayer()
                 )
             )
         )
+        if (gameData == null) return
+        initiator.send(Json.encodeToString(gameData))
     }
 
     suspend fun stop() {
@@ -85,7 +101,7 @@ class WaitingGame(
     }
 
     fun interface MessageHandler {
-        fun onMessage(login: String, message: String)
+        suspend fun onMessage(login: String, message: String)
     }
 
     companion object {

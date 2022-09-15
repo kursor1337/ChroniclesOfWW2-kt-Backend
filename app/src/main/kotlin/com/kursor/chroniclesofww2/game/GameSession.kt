@@ -81,6 +81,7 @@ class GameSession(
 
     var listener: Listener? = null
 
+
     suspend fun stopSession() {
         initiatorClient?.send(
             GameSessionDTO(

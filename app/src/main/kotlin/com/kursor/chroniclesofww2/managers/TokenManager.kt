@@ -12,7 +12,7 @@ object TokenManager {
 
     private fun getExpirationDate(): Date = Date(System.currentTimeMillis() + TOKEN_LIFETIME)
 
-    fun generateToken(user: User): String = generateToken(user)
+    fun generateToken(user: User): String = generateToken(user.login)
 
     fun generateToken(login: String): String = JWT.create().withClaim(
         "login", login).withExpiresAt(getExpirationDate()).sign(Algorithm.HMAC256(JWT_SECRET))
