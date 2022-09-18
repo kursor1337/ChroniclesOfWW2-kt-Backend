@@ -70,11 +70,13 @@ class GameManager {
         waitingGame: WaitingGame
     ): GameSession {
         val gameData = GameData(
-            waitingGame.initiator.login,
-            waitingGame.connected!!.login,
-            waitingGame.battle,
-            waitingGame.boardHeight,
-            waitingGame.boardWidth,
+            myName = waitingGame.initiator.login,
+            enemyName = waitingGame.connected!!.login,
+            battle = waitingGame.battle,
+            boardHeight = waitingGame.boardHeight,
+            boardWidth = waitingGame.boardWidth,
+            invertNations = waitingGame.invertNations,
+            meInitiator = true
         )
         return GameSession(
             id = waitingGame.id,

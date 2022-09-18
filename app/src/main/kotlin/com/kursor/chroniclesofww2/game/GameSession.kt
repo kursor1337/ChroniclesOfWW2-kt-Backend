@@ -19,7 +19,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.serialization.Serializable
 
 
 //player 1 always initiator , it is a host of the game
@@ -44,14 +43,15 @@ class GameSession(
     var gameStarted: Boolean = false
 
     val messageHandler = MessageHandler { login, receiveDTO ->
-        val client = getClientWithLogin(login) ?: return@MessageHandler
-        val otherClient = getOtherClientForLogin(login) ?: return@MessageHandler
+        Log.d("GameSession", "$receiveDTO")
+        val client = getClientWithLogin(login)!!
+        val otherClient = getOtherClientForLogin(login)!!
         val type = receiveDTO.type
         val message = receiveDTO.message
         when (type) {
             GameSessionMessageType.MOVE -> {
-                Log.d("GameSession", "$receiveDTO")
-                val move = Move.decodeFromStringToSimplified(message).restore(ruleManager.model)
+                val move = Move.decodeFromStringToSimplified(message).restore(ruleManager.model, login)
+                Log.d("GameSession", "incoming move: $move")
                 if (!ruleManager.checkMoveForValidity(move)) {
                     client.send(
                         gameSessionDTO = GameSessionDTO(
@@ -142,19 +142,18 @@ class GameSession(
             return
         }
 
-        setClient(Client(player.name, webSocketServerSession))
-        start()
-
+        setClient(Client(login, webSocketServerSession))
+        tryStart()
     }
 
     fun setClient(client: Client) {
-        when {
-            client.login != initiatorClient?.login -> initiatorClient = client
-            client.login != connectedClient?.login -> connectedClient = client
+        when (client.login) {
+            initiatorPlayer.name -> initiatorClient = client
+            connectedPlayer.name -> connectedClient = client
         }
     }
 
-    suspend fun start() {
+    suspend fun tryStart() {
         if (!clientsInitialized) return
         initiatorClient!!.send(
             GameSessionDTO(
@@ -173,7 +172,7 @@ class GameSession(
     }
 
 
-    private fun Move.Simplified.restore(model: Model): Move {
+    private fun Move.Simplified.restore(model: Model, login: String): Move {
         val move = when (type) {
             Move.Type.MOTION -> {
                 this as MotionMove.Simplified
@@ -187,8 +186,10 @@ class GameSession(
                 this as AddMove.Simplified
                 val destRow = destinationCoordinate / 10
                 val destColumn = destinationCoordinate % 10
+                val reserve = if (login == initiatorPlayer.name) model.me.divisionResources.reserves[divisionType]!!
+                else model.enemy.divisionResources.reserves[divisionType]!!
                 AddMove(
-                    model.enemy.divisionResources.reserves[divisionType]!!,
+                    reserve,
                     model.board[destRow, destColumn]
                 )
             }

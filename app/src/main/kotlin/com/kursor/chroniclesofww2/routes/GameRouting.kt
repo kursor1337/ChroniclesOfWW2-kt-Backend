@@ -34,9 +34,11 @@ fun Application.gameRouting(gameManager: GameManager) {
 
 
                 val received = incoming.receive()
+                Log.d("SessionWebSocket", "$received")
                 if (received !is Frame.Text) {
                     close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Must've sent valid id"))
                 }
+                Log.d("SessionWebSocket", (received as Frame.Text).readText())
                 val gameId = (received as Frame.Text).readText().toInt()
 
                 val gameSession = gameManager.getGameSessionById(gameId)
@@ -48,6 +50,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                 gameSession.initClient(login, this)
 
                 for (frame in incoming) {
+                    Log.d("SessionWebSocket", "$frame")
                     if (frame !is Frame.Text) continue
                     val receiveDTO = Json.decodeFromString<GameSessionDTO>(frame.readText())
                     gameSession.messageHandler.onPlayerMessage(login, receiveDTO)
