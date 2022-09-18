@@ -23,36 +23,21 @@ class GameManager {
             timeoutListener = WaitingGame.TimeoutListener {
                 GameController.waitingGameTimedOut(it)
             }
+            startSessionListener = WaitingGame.StartSessionListener {
+                val gameSession = createGameSession(it).apply {
+                    listener = object : GameSession.Listener {
+                        override suspend fun onGameSessionStopped(gameSession: GameSession) {
+                            stopGameSession(gameSession)
+                        }
+                    }
+                    startTimeoutTimer()
+                }
+                GameController.gameInitialized(gameSession)
+            }
             startTimeoutTimer()
         }
         GameController.gameCreated(waitingGame)
         return CreateGameResponseDTO(gameId = id)
-    }
-
-    suspend fun initGameSession(joinGameReceiveDTO: JoinGameReceiveDTO): JoinGameResponseDTO {
-        val id = joinGameReceiveDTO.gameId
-        val gameDataWaiting = getWaitingGameById(id)
-            ?: return JoinGameResponseDTO(
-                message = GameFeaturesMessages.NO_GAME_WITH_SUCH_ID,
-                gameData = null
-            )
-        if (gameDataWaiting.password != joinGameReceiveDTO.password) return JoinGameResponseDTO(
-            message = GameFeaturesMessages.INVALID_PASSWORD,
-            gameData = null
-        )
-        val gameSession = createGameSession(gameDataWaiting, joinGameReceiveDTO).apply {
-            listener = object : GameSession.Listener {
-                override suspend fun onGameSessionStopped(gameSession: GameSession) {
-                    stopGameSession(gameSession)
-                }
-            }
-            startTimeoutTimer()
-        }
-        GameController.gameInitialized(gameSession)
-        return JoinGameResponseDTO(
-            message = GameFeaturesMessages.SUCCESS,
-            gameData = gameSession.initiatorGameData.getVersionForAnotherPlayer()
-        )
     }
 
     suspend fun stopGameSession(gameSession: GameSession) {
@@ -82,12 +67,11 @@ class GameManager {
     }
 
     private fun createGameSession(
-        waitingGame: WaitingGame,
-        joinGameReceiveDTO: JoinGameReceiveDTO
+        waitingGame: WaitingGame
     ): GameSession {
         val gameData = GameData(
             waitingGame.initiator.login,
-            joinGameReceiveDTO.connectedUserLogin,
+            waitingGame.connected!!.login,
             waitingGame.battle,
             waitingGame.boardHeight,
             waitingGame.boardWidth,

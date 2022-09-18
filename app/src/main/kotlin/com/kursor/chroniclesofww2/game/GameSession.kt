@@ -50,6 +50,7 @@ class GameSession(
         val message = receiveDTO.message
         when (type) {
             GameSessionMessageType.MOVE -> {
+                Log.d("GameSession", "$receiveDTO")
                 val move = Move.decodeFromStringToSimplified(message).restore(ruleManager.model)
                 if (!ruleManager.checkMoveForValidity(move)) {
                     client.send(
@@ -65,6 +66,7 @@ class GameSession(
                     Move.Type.ADD -> model.handleAddMove(move as AddMove)
                     Move.Type.MOTION -> model.handleMotionMove(move as MotionMove)
                 }
+                ruleManager.nextTurn()
             }
             GameSessionMessageType.DISCONNECT -> {
                 otherClient.send(
@@ -86,15 +88,17 @@ class GameSession(
         initiatorClient?.send(
             GameSessionDTO(
                 type = GameSessionMessageType.ERROR,
-                message = ""
+                message = "stopped session"
             )
         )
         connectedClient?.send(
             GameSessionDTO(
                 type = GameSessionMessageType.ERROR,
-                message = ""
+                message = "stop session"
             )
         )
+        initiatorClient?.webSocketSession?.close()
+        connectedClient?.webSocketSession?.close()
         listener?.onGameSessionStopped(this)
     }
 
@@ -194,7 +198,7 @@ class GameSession(
 
     companion object {
         const val TAG = "GameSession"
-        const val TIMEOUT = 15000L
+        const val TIMEOUT = 60000L
     }
 
 

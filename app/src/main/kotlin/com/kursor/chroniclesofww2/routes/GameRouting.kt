@@ -22,13 +22,15 @@ fun Application.gameRouting(gameManager: GameManager) {
     routing {
         authenticate(AUTH_JWT) {
             webSocket(Routes.Game.SESSION.relativePath) {
-                Log.i("CreateGameWebSocket", "open web socket")
+                Log.i("SessionWebSocket", "open web socket")
                 val principal = call.principal<JWTPrincipal>()
                 val login = principal?.payload?.getClaim("login")?.asString()
                 if (login == null) {
                     close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Not authenticated"))
                     return@webSocket
                 }
+
+                Log.i("SessionWebSocket", login)
 
 
                 val received = incoming.receive()
@@ -86,10 +88,6 @@ fun Application.gameRouting(gameManager: GameManager) {
                 for (frame in incoming) {
                     if (frame !is Frame.Text) continue
                     val string = frame.readText()
-                    if (string == GameFeaturesMessages.ACCEPTED || string == GameFeaturesMessages.REJECTED) {
-                        waitingGame.verdict(string)
-                    }
-                    if (string == GameFeaturesMessages.CANCEL_CONNECTION) waitingGame.stop()
                     waitingGame.messageHandler.onMessage(login, string)
                 }
             }
@@ -115,7 +113,16 @@ fun Application.gameRouting(gameManager: GameManager) {
                     close()
                     return@webSocket
                 }
+                if (!waitingGame.checkPassword(joinGameReceiveDTO.password)) {
+                    send(GameFeaturesMessages.INVALID_PASSWORD)
+                    close()
+                    return@webSocket
+                }
                 waitingGame.connectClient(Client(login, this))
+                for (frame in incoming) {
+                    frame as? Frame.Text ?: continue
+                    waitingGame.messageHandler.onMessage(login, frame.readText() )
+                }
             }
 
             get(Routes.Game.relativePath) {

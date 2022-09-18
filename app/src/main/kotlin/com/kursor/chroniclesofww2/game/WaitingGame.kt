@@ -43,6 +43,7 @@ class WaitingGame(
     )
 
     var timeoutListener: TimeoutListener? = null
+    var startSessionListener: StartSessionListener? = null
 
     var connected: Client? = null
 
@@ -67,6 +68,7 @@ class WaitingGame(
         initiator.send("${GameFeaturesMessages.REQUEST_FOR_ACCEPT}${client.login}")
     }
 
+    fun checkPassword(password: String?): Boolean = password == this.password
 
     suspend fun verdict(string: String) {
         val gameData = if (string == GameFeaturesMessages.ACCEPTED) GameData(
@@ -78,7 +80,7 @@ class WaitingGame(
             invertNations = invertNations
         ) else null
 
-        connected?.send(
+        connected!!.send(
             Json.encodeToString(
                 JoinGameResponseDTO(
                     message = string,
@@ -88,6 +90,7 @@ class WaitingGame(
         )
         if (gameData == null) return
         initiator.send(Json.encodeToString(gameData))
+        startSessionListener?.onSessionStart(this)
     }
 
     suspend fun stop() {
@@ -98,6 +101,10 @@ class WaitingGame(
 
     fun interface TimeoutListener {
         suspend fun onTimeout(waitingGame: WaitingGame)
+    }
+
+    fun interface StartSessionListener {
+        suspend fun onSessionStart(waitingGame: WaitingGame)
     }
 
     fun interface MessageHandler {
