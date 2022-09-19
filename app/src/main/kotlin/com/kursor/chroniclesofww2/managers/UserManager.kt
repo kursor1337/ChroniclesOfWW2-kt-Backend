@@ -67,18 +67,22 @@ class UserManager(val userRepository: UserRepository) {
         return UpdateUserInfoResponseDTO(message = SUCCESS)
     }
 
-    suspend fun changePasswordForUser(login: String, newPassword: String): ChangePasswordResponseDTO {
+    suspend fun changePasswordForUser(
+        login: String,
+        changePasswordReceiveDTO: ChangePasswordReceiveDTO
+    ): ChangePasswordResponseDTO {
         val user = userRepository.getUserByLogin(login)
             ?: return ChangePasswordResponseDTO(
                 token = null,
                 message = NO_SUCH_USER
             )
+        val newPassword = changePasswordReceiveDTO.newPassword
         userRepository.updateUser(User(login, user.username, BCrypt.hashpw(newPassword, BCrypt.gensalt())))
         val newToken = TokenManager.generateToken(user)
         return ChangePasswordResponseDTO(token = newToken, message = SUCCESS)
     }
 
-    suspend fun deleteUser(login: String): DeleteUserResponseDTO {
+    suspend fun deleteUser(login: String, deleteUserReceiveDTO: DeleteUserReceiveDTO): DeleteUserResponseDTO {
         if (userRepository.getUserByLogin(login) == null) return DeleteUserResponseDTO(NO_SUCH_USER)
         userRepository.deleteUser(login)
         return DeleteUserResponseDTO(message = SUCCESS)

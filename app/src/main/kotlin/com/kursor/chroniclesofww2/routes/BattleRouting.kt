@@ -16,13 +16,12 @@ import io.ktor.server.routing.*
 
 fun Application.battleRouting(battleManager: BattleManager) {
     routing {
-        route(Routes.Battles.relativePath) {
             authenticate(AUTH_JWT) {
-                get("/${Routes.Battles.GET_ALL.node}") {
+                get(Routes.Battles.GET_ALL.relativePath) {
                     call.respond(battleManager.getAllBattles())
                 }
 
-                get("/${Routes.Battles.GET_ALL.node}/{id}") {
+                get("${Routes.Battles.GET_ALL.relativePath}/{id}") {
                     val id = call.parameters["id"]?.toInt() ?: return@get
                     val battle = battleManager.getBattleById(id)
                     if (battle == null) {
@@ -32,13 +31,13 @@ fun Application.battleRouting(battleManager: BattleManager) {
                     call.respond(HttpStatusCode.OK, battle)
                 }
 
-                get("/${Routes.Battles.MY.node}") {
+                get(Routes.Battles.MY.relativePath) {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@get
                     call.respond(battleManager.getBattlesOfUser(login))
                 }
 
-                post("/${Routes.Battles.SAVE.node}") {
+                post(Routes.Battles.SAVE.relativePath) {
                     val saveBattleReceiveDTO = call.receive<SaveBattleReceiveDTO>()
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@post
@@ -46,7 +45,7 @@ fun Application.battleRouting(battleManager: BattleManager) {
                     call.respond(response)
                 }
 
-                put("/${Routes.Battles.UPDATE.node}") {
+                put(Routes.Battles.UPDATE.relativePath) {
                     val editBattleReceiveDTO = call.receive<EditBattleReceiveDTO>()
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
@@ -54,7 +53,7 @@ fun Application.battleRouting(battleManager: BattleManager) {
                     call.respond(response)
                 }
 
-                delete("/${Routes.Battles.DELETE.node}") {
+                delete(Routes.Battles.DELETE.relativePath) {
                     val deleteBattleReceiveDTO = call.receive<DeleteBattleReceiveDTO>()
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@delete
@@ -62,6 +61,5 @@ fun Application.battleRouting(battleManager: BattleManager) {
                     call.respond(response)
                 }
             }
-        }
     }
 }

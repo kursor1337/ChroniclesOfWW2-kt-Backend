@@ -22,7 +22,7 @@ fun Application.gameRouting(gameManager: GameManager) {
     routing {
         authenticate(AUTH_JWT) {
             webSocket(Routes.Game.SESSION.relativePath) {
-                Log.i("SessionWebSocket", "open web socket")
+                Log.d("SessionWebSocket", "open web socket")
                 val principal = call.principal<JWTPrincipal>()
                 val login = principal?.payload?.getClaim("login")?.asString()
                 if (login == null) {
@@ -30,7 +30,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                     return@webSocket
                 }
 
-                Log.i("SessionWebSocket", login)
+                Log.d("SessionWebSocket", login)
 
 
                 val received = incoming.receive()

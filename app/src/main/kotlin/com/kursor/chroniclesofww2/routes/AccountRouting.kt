@@ -15,27 +15,25 @@ import io.ktor.server.routing.*
 
 fun Application.accountRouting(userManager: UserManager) {
     routing {
-        route(Routes.Account.relativePath) {
-            authenticate(AUTH_JWT) {
-                put("/${Routes.Account.CHANGE_PASSWORD.node}") {
-                    val principal = call.principal<JWTPrincipal>()
-                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
-                    val changePasswordReceiveDTO = call.receive<ChangePasswordReceiveDTO>()
-                    val response = userManager.changePasswordForUser(login, changePasswordReceiveDTO.newPassword)
-                    call.respond(response)
-                }
+        authenticate(AUTH_JWT) {
+            put(Routes.Account.CHANGE_PASSWORD.relativePath) {
+                val principal = call.principal<JWTPrincipal>()
+                val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
+                val changePasswordReceiveDTO = call.receive<ChangePasswordReceiveDTO>()
+                val response = userManager.changePasswordForUser(login, changePasswordReceiveDTO)
+                call.respond(response)
+            }
 
-                put("/${Routes.Account.UPDATE_USER_INFO.node}") {
-                    val principal = call.principal<JWTPrincipal>()
-                    val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
-                    val updateUserInfoReceiveDTO = call.receive<UpdateUserInfoReceiveDTO>()
-                    val response = userManager.updateUserInfo(login, updateUserInfoReceiveDTO.updatedUserInfo)
-                    call.respond(response)
-                }
+            put(Routes.Account.UPDATE_USER_INFO.relativePath) {
+                val principal = call.principal<JWTPrincipal>()
+                val login = principal?.payload?.getClaim("login")?.asString() ?: return@put
+                val updateUserInfoReceiveDTO = call.receive<UpdateUserInfoReceiveDTO>()
+                val response = userManager.updateUserInfo(login, updateUserInfoReceiveDTO.updatedUserInfo)
+                call.respond(response)
+            }
 
-                post("/${Routes.Account.AUTH.node}") {
-                    call.respond(HttpStatusCode.OK, "Authorized")
-                }
+            post(Routes.Account.AUTH.relativePath) {
+                call.respond(HttpStatusCode.OK, "Authorized")
             }
         }
     }
