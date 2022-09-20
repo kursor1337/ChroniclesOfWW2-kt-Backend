@@ -1,11 +1,8 @@
 package com.kursor.chroniclesofww2.routes
 
-import com.kursor.chroniclesofww2.features.LoginErrorMessages
-import com.kursor.chroniclesofww2.features.LoginReceiveDTO
+import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.SUCCESS
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.USER_ALREADY_REGISTERED
-import com.kursor.chroniclesofww2.features.RegisterReceiveDTO
-import com.kursor.chroniclesofww2.features.Routes
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.managers.UserManager
 import com.kursor.chroniclesofww2.userInfo
