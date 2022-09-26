@@ -1,10 +1,7 @@
 package com.kursor.chroniclesofww2.routes
 
 import com.kursor.chroniclesofww2.AUTH_JWT
-import com.kursor.chroniclesofww2.features.ChangePasswordReceiveDTO
-import com.kursor.chroniclesofww2.features.DeleteUserReceiveDTO
-import com.kursor.chroniclesofww2.features.Routes
-import com.kursor.chroniclesofww2.features.UpdateUserInfoReceiveDTO
+import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.managers.UserManager
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -43,6 +40,14 @@ fun Application.accountRouting(userManager: UserManager) {
                 val deleteUserReceiveDTO = call.receive<DeleteUserReceiveDTO>()
                 val response = userManager.deleteUser(login, deleteUserReceiveDTO)
                 call.respond(response)
+            }
+            get(Routes.Account.GET_ACCOUNT_INFO.relativePath) {
+                val login = call.principal<JWTPrincipal>()?.payload?.getClaim("login")?.asString() ?: return@get
+                val user = userManager.getUserByLogin(login) ?: return@get
+                call.respond(AccountInfo(
+                    login = user.login,
+                    username = user.username
+                ))
             }
         }
     }
