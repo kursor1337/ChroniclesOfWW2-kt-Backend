@@ -18,7 +18,7 @@ fun Application.battleRouting(battleManager: BattleManager) {
     routing {
             authenticate(AUTH_JWT) {
                 get(Routes.Battles.GET_ALL.relativePath) {
-                    call.respond(battleManager.getAllBattles())
+                    call.respond(battleManager.getAllBattles().map { it.toBattle() })
                 }
 
                 get("${Routes.Battles.GET_ALL.relativePath}/{id}") {
@@ -34,7 +34,7 @@ fun Application.battleRouting(battleManager: BattleManager) {
                 get(Routes.Battles.MY.relativePath) {
                     val principal = call.principal<JWTPrincipal>()
                     val login = principal?.payload?.getClaim("login")?.asString() ?: return@get
-                    call.respond(battleManager.getBattlesOfUser(login))
+                    call.respond(battleManager.getBattlesOfUser(login).map { it.toBattle() })
                 }
 
                 post(Routes.Battles.SAVE.relativePath) {

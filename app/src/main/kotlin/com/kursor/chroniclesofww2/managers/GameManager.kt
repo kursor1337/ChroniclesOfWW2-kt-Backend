@@ -49,7 +49,8 @@ class GameManager {
         return GameController.getWaitingGames().map { (id, waitingGame) ->
             WaitingGameInfoDTO(
                 id = waitingGame.id,
-                initiatorLogin = waitingGame.initiator.login
+                initiatorLogin = waitingGame.initiator.login,
+                battleData = waitingGame.battle.data
             )
         }
     }

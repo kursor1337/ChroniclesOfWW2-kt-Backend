@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
 val model_version: String by project
 
 val postgres_version: String by project
@@ -55,8 +57,17 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit:$kotlin_version")
 
     implementation("com.github.kursor1337:chronicles-of-ww2-kt-model:$model_version")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 configurations.all {
     resolutionStrategy.cacheChangingModulesFor(0, "seconds")
+}
+val compileKotlin: KotlinCompile by tasks
+compileKotlin.kotlinOptions {
+    jvmTarget = "1.8"
+}
+val compileTestKotlin: KotlinCompile by tasks
+compileTestKotlin.kotlinOptions {
+    jvmTarget = "1.8"
 }
