@@ -28,7 +28,7 @@ fun Application.battleRouting(battleManager: BattleManager) {
                         call.respond(HttpStatusCode.NotFound)
                         return@get
                     }
-                    call.respond(HttpStatusCode.OK, battle)
+                    call.respond(HttpStatusCode.OK, battle.toBattle())
                 }
 
                 get(Routes.Battles.MY.relativePath) {

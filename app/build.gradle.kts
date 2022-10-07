@@ -13,12 +13,13 @@ plugins {
     application
     kotlin("jvm") version "1.7.10"
     id("org.jetbrains.kotlin.plugin.serialization") version "1.7.10"
+    id("com.github.johnrengelman.shadow") version "7.1.2"
 }
 
 group = "com.kursor.chroniclesofww2"
 version = "0.0.1"
 application {
-    mainClass.set("com.kursor.chroniclesofww2.ApplicationKt")
+    mainClass.set("com.kursor.chroniclesofww2.App")
 
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
@@ -86,4 +87,10 @@ compileKotlin.kotlinOptions {
 val compileTestKotlin: KotlinCompile by tasks
 compileTestKotlin.kotlinOptions {
     jvmTarget = "1.8"
+}
+
+tasks.shadowJar {
+    archiveBaseName.set("chronicles-of-ww2")
+    archiveClassifier.set("shadowJar")
+    archiveVersion.set("beta-0.1")
 }

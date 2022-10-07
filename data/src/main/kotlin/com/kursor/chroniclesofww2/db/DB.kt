@@ -11,7 +11,7 @@ import org.jetbrains.exposed.sql.addLogger
 import org.jetbrains.exposed.sql.transactions.transaction
 
 
-const val DB_NAME = "Chronicles Of WW2"
+const val DB_NAME = "chronicles_of_ww2"
 const val DB_PORT = 5432
 
 object DB {
