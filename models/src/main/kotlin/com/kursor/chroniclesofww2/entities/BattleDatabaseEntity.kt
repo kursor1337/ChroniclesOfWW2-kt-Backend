@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 
 
 @Serializable
-data class BattleDAO(
+data class BattleDatabaseEntity(
     val id: Int,
     val loginOfCreator: String,
     val name: String,
