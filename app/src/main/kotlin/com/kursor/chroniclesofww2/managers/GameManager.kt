@@ -1,17 +1,22 @@
 package com.kursor.chroniclesofww2.managers
 
-import com.kursor.chroniclesofww2.features.*
+import com.kursor.chroniclesofww2.features.CreateGameReceiveDTO
+import com.kursor.chroniclesofww2.features.CreateGameResponseDTO
+import com.kursor.chroniclesofww2.features.WaitingGameInfoDTO
 import com.kursor.chroniclesofww2.game.GameSession
 import com.kursor.chroniclesofww2.game.WaitingGame
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.model.serializable.GameData
+import com.kursor.chroniclesofww2.repositories.UserScoreRepository
 import io.ktor.server.websocket.*
 import kotlin.random.Random
 
 const val GAME_ID_UNTIL = 999999
 const val GAME_ID_FROM = 100000
 
-class GameManager {
+class GameManager(
+    val userScoreRepository: UserScoreRepository
+) {
 
     suspend fun createGame(
         webSocketServerSession: DefaultWebSocketServerSession,
@@ -28,6 +33,10 @@ class GameManager {
                     listener = object : GameSession.Listener {
                         override suspend fun onGameSessionStopped(gameSession: GameSession) {
                             stopGameSession(gameSession)
+                        }
+                        override suspend fun onMatchOver(winner: String, loser: String) {
+                            userScoreRepository.incrementUserScore(winner)
+                            userScoreRepository.decrementUserScore(loser)
                         }
                     }
                     startTimeoutTimer()
@@ -136,6 +145,12 @@ class GameManager {
         fun getCurrentGameSessions(): Map<Int, GameSession> = currentGameSessions
 
         fun getWaitingGames(): Map<Int, WaitingGame> = waitingGames
+
+
+    }
+
+    private object MatchController {
+
 
 
     }

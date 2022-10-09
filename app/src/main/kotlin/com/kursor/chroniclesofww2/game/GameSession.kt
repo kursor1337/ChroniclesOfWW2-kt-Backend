@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 class GameSession(
     val id: Int,
     val initiatorGameData: GameData,
+    val isMatch: Boolean = false
 ) {
 
     private val initiatorPlayer = initiatorGameData.me
@@ -67,6 +68,16 @@ class GameSession(
                     Move.Type.MOTION -> model.handleMotionMove(move as MotionMove)
                 }
                 ruleManager.nextTurn()
+                if (isMatch) {
+                    if (ruleManager.enemyLost()) listener?.onMatchOver(
+                        winner = initiatorPlayer.name,
+                        loser = connectedPlayer.name
+                    )
+                    else if (ruleManager.meLost()) listener?.onMatchOver(
+                        winner = connectedPlayer.name,
+                        loser = initiatorPlayer.name
+                    )
+                }
             }
             GameSessionMessageType.DISCONNECT -> {
                 otherClient.send(
@@ -210,6 +221,7 @@ class GameSession(
     interface Listener {
         suspend fun onGameSessionStarted(gameSession: GameSession) {}
         suspend fun onGameSessionStopped(gameSession: GameSession) {}
+        suspend fun onMatchOver(winner: String, loser: String) {}
     }
 
 }

@@ -44,6 +44,18 @@ class UserScoreRepository(
         deleteUserScore(userScore.login)
     }
 
+    suspend fun incrementUserScore(login: String) {
+        val cur = getUserScoreByLogin(login)
+        if (cur == null) saveUserScore(UserScore(login, DEFAULT_USER_SCORE + 1))
+        else updateUserScore(UserScore(login, cur.score + 1))
+    }
+
+    suspend fun decrementUserScore(login: String) {
+        val cur = getUserScoreByLogin(login)
+        if (cur == null) saveUserScore(UserScore(login, DEFAULT_USER_SCORE - 1))
+        else updateUserScore(UserScore(login, cur.score - 1))
+    }
+
     suspend fun syncWithUserRepository(userRepository: UserRepository) {
         val userScoreSet = mutableSetOf<UserScore>()
         userRepository.getAllUsers().forEach {
