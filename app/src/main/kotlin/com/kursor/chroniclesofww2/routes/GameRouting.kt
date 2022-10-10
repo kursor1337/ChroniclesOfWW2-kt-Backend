@@ -131,6 +131,18 @@ fun Application.gameRouting(gameManager: GameManager) {
             get(Routes.Game.relativePath) {
                 call.respond(HttpStatusCode.OK, gameManager.getCurrentWaitingGamesInfo())
             }
+
+            webSocket(Routes.Game.MATCH.relativePath) {
+                val principal = call.principal<JWTPrincipal>()
+                val login = principal?.payload?.getClaim("login")?.asString()
+                if (login == null) {
+                    close(CloseReason(CloseReason.Codes.CANNOT_ACCEPT, "Not authenticated"))
+                    return@webSocket
+                }
+
+                gameManager.matchingGame(Client(login, this))
+            }
+
         }
 
 

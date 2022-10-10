@@ -14,7 +14,9 @@ import kotlin.random.Random
 const val GAME_ID_UNTIL = 999999
 const val GAME_ID_FROM = 100000
 
-class GameManager() {
+class GameManager(
+    val userScoreRepository: UserScoreRepository
+) {
 
     suspend fun createGame(
         webSocketServerSession: DefaultWebSocketServerSession,
@@ -48,7 +50,8 @@ class GameManager() {
     }
 
     suspend fun matchingGame(client: Client) {
-
+        val score = userScoreRepository.getUserScoreByLogin(client.login)!!.score
+        MatchController.newMatchingUser(MatchingUser(client.login, client, score))
     }
 
     fun getCurrentWaitingGamesInfo(): List<WaitingGameInfoDTO> {
@@ -167,6 +170,9 @@ class GameManager() {
                     return
                 }
             }
+            thisScoreMatchingUsers = matchingUsers[matchingUser.score] ?: mutableMapOf()
+            thisScoreMatchingUsers[matchingUser.login] = matchingUser
+            matchingUsers[matchingUser.score] = thisScoreMatchingUsers
         }
 
         fun createMatchingGame(matchingUser1: MatchingUser, matchingUser2: MatchingUser) {
