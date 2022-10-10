@@ -36,9 +36,8 @@ const val MATCHING_GAME_BOARD_WIDTH = 10
 const val MATCHING_GAME_BOARD_HEIGHT = 10
 
 class MatchingGame(
-    val id: Int,
-    val initiator: Client,
-    val connected: Client
+    val initiator: MatchingUser,
+    val connected: MatchingUser
 ) {
 
     var stopListener: StopListener? = null
@@ -65,8 +64,8 @@ class MatchingGame(
                 if (initiator.login == login) initiatorAgreed = true
                 if (connected.login == login) connectedAgreed = true
                 if (initiatorAgreed && connectedAgreed) {
-                    initiator.send(Json.encodeToString(gameData))
-                    connected.send(Json.encodeToString(gameData.getVersionForAnotherPlayer()))
+                    initiator.client.send(Json.encodeToString(gameData))
+                    connected.client.send(Json.encodeToString(gameData.getVersionForAnotherPlayer()))
                     startSessionListener?.onSessionStart(this)
                 }
             }
@@ -77,8 +76,8 @@ class MatchingGame(
                         message = "Rejected"
                     )
                 )
-                initiator.send(string)
-                connected.send(string)
+                initiator.client.send(string)
+                connected.client.send(string)
                 stopListener?.onStop(this)
             }
         }
@@ -95,8 +94,8 @@ class MatchingGame(
                 type = MatchingGameMessageType.TIMEOUT,
                 message = "Timeout"
             ))
-            initiator.send(message)
-            connected.send(message)
+            initiator.client.send(message)
+            connected.client.send(message)
             stopListener?.onStop(this@MatchingGame)
         }
     }
@@ -114,7 +113,7 @@ class MatchingGame(
     }
 
     companion object {
-        const val TIMEOUT = 120000L
+        const val TIMEOUT = 15000L
         const val TIMEOUT_MESSAGE = "Timeout"
     }
 

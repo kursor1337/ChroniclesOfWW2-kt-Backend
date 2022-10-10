@@ -3,20 +3,18 @@ package com.kursor.chroniclesofww2.managers
 import com.kursor.chroniclesofww2.features.CreateGameReceiveDTO
 import com.kursor.chroniclesofww2.features.CreateGameResponseDTO
 import com.kursor.chroniclesofww2.features.WaitingGameInfoDTO
-import com.kursor.chroniclesofww2.game.GameSession
-import com.kursor.chroniclesofww2.game.WaitingGame
+import com.kursor.chroniclesofww2.game.*
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.model.serializable.GameData
 import com.kursor.chroniclesofww2.repositories.UserScoreRepository
 import io.ktor.server.websocket.*
+import org.koin.java.KoinJavaComponent.inject
 import kotlin.random.Random
 
 const val GAME_ID_UNTIL = 999999
 const val GAME_ID_FROM = 100000
 
-class GameManager(
-    val userScoreRepository: UserScoreRepository
-) {
+class GameManager() {
 
     suspend fun createGame(
         webSocketServerSession: DefaultWebSocketServerSession,
@@ -34,10 +32,6 @@ class GameManager(
                         override suspend fun onGameSessionStopped(gameSession: GameSession) {
                             stopGameSession(gameSession)
                         }
-                        override suspend fun onMatchOver(winner: String, loser: String) {
-                            userScoreRepository.incrementUserScore(winner)
-                            userScoreRepository.decrementUserScore(loser)
-                        }
                     }
                     startTimeoutTimer()
                 }
@@ -51,6 +45,10 @@ class GameManager(
 
     suspend fun stopGameSession(gameSession: GameSession) {
         GameController.gameStopped(gameSession)
+    }
+
+    suspend fun matchingGame(client: Client) {
+
     }
 
     fun getCurrentWaitingGamesInfo(): List<WaitingGameInfoDTO> {
@@ -92,15 +90,6 @@ class GameManager(
             id = waitingGame.id,
             initiatorGameData = gameData
         )
-    }
-
-    private fun generateGameId(): Int {
-        val random = Random(System.currentTimeMillis())
-        var id = random.nextInt(GAME_ID_FROM, GAME_ID_UNTIL)
-        while (getGameSessionById(id) != null || getWaitingGameById(id) != null) {
-            id = random.nextInt(GAME_ID_FROM, GAME_ID_UNTIL)
-        }
-        return id
     }
 
     interface GameControllerObserver {
@@ -151,8 +140,79 @@ class GameManager(
 
     private object MatchController {
 
+        val userScoreRepository by inject<UserScoreRepository>(UserScoreRepository::class.java)
 
+        val matchingUsers = mutableMapOf<Int, MutableMap<String, MatchingUser>>()
 
+        val matchingGames = mutableSetOf<MatchingGame>()
+
+        suspend fun newMatchingUser(matchingUser: MatchingUser) {
+            var thisScoreMatchingUsers = matchingUsers[matchingUser.score] ?: mutableMapOf()
+            matchingUsers[matchingUser.score] = thisScoreMatchingUsers
+            if (thisScoreMatchingUsers.isNotEmpty()) {
+                createMatchingGame(thisScoreMatchingUsers.values.elementAt(0), matchingUser)
+                return
+            }
+            for (i in 0..MATCHING_SCORE_MAX_DIFF) {
+                thisScoreMatchingUsers = matchingUsers[matchingUser.score + i] ?: mutableMapOf()
+                matchingUsers[matchingUser.score + i] = thisScoreMatchingUsers
+                if (thisScoreMatchingUsers.isNotEmpty()) {
+                    createMatchingGame(thisScoreMatchingUsers.values.elementAt(0), matchingUser)
+                    return
+                }
+                thisScoreMatchingUsers = matchingUsers[matchingUser.score - i] ?: mutableMapOf()
+                matchingUsers[matchingUser.score + i] = thisScoreMatchingUsers
+                if (thisScoreMatchingUsers.isNotEmpty()) {
+                    createMatchingGame(thisScoreMatchingUsers.values.elementAt(0), matchingUser)
+                    return
+                }
+            }
+        }
+
+        fun createMatchingGame(matchingUser1: MatchingUser, matchingUser2: MatchingUser) {
+            matchingUsers[matchingUser1.score]?.remove(matchingUser1.login)
+            matchingUsers[matchingUser2.score]?.remove(matchingUser2.login)
+            matchingGames.add(
+                MatchingGame(matchingUser1, matchingUser2).apply {
+                    stopListener = MatchingGame.StopListener {
+                        matchingGames.remove(it)
+                    }
+                    startSessionListener = MatchingGame.StartSessionListener {
+                        val gameSession = GameSession(
+                            id = generateGameId(),
+                            initiatorGameData = it.gameData,
+                            isMatch = true
+                        ).apply {
+                            listener = object : GameSession.Listener {
+                                override suspend fun onGameSessionStopped(gameSession: GameSession) {
+                                    GameController.gameStopped(gameSession)
+                                }
+
+                                override suspend fun onMatchOver(winner: String, loser: String) {
+                                    userScoreRepository.incrementUserScore(winner)
+                                    userScoreRepository.decrementUserScore(loser)
+                                }
+                            }
+                            startTimeoutTimer()
+                        }
+                        GameController.gameInitialized(gameSession)
+                    }
+                    startTimeoutTimer()
+                }
+            )
+        }
     }
 
+    companion object {
+        fun generateGameId(): Int {
+            val random = Random(System.currentTimeMillis())
+            var id = random.nextInt(GAME_ID_FROM, GAME_ID_UNTIL)
+            while (GameController.getCurrentGameSessions()[id] != null || GameController.getWaitingGames()[id] != null) {
+                id = random.nextInt(GAME_ID_FROM, GAME_ID_UNTIL)
+            }
+            return id
+        }
+    }
 }
+
+const val MATCHING_SCORE_MAX_DIFF = 5
