@@ -35,7 +35,8 @@ class BattleManager(private val battleRepository: BattleRepository) {
     }
 
     suspend fun editBattle(login: String, editBattleReceiveDTO: EditBattleReceiveDTO): EditBattleResponseDTO {
-        if (!isCreator(login, editBattleReceiveDTO.id)) return EditBattleResponseDTO(message = NOT_CREATOR)
+        if (!isCreator(login, editBattleReceiveDTO.id))
+            return EditBattleResponseDTO(message = NOT_CREATOR)
         val battle = battleRepository.getBattleById(editBattleReceiveDTO.id)
             ?: return EditBattleResponseDTO(message = NO_BATTLE_WITH_SUCH_ID)
         battleRepository.updateBattle(
@@ -52,7 +53,8 @@ class BattleManager(private val battleRepository: BattleRepository) {
 
 
     suspend fun deleteBattle(login: String, deleteBattleReceiveDTO: DeleteBattleReceiveDTO): DeleteBattleResponseDTO {
-        if (!isCreator(login, deleteBattleReceiveDTO.id)) return DeleteBattleResponseDTO(message = NOT_CREATOR)
+        if (!isCreator(login, deleteBattleReceiveDTO.id))
+            return DeleteBattleResponseDTO(message = NOT_CREATOR)
         if (battleRepository.getBattleById(deleteBattleReceiveDTO.id) == null) {
             return DeleteBattleResponseDTO(message = NO_BATTLE_WITH_SUCH_ID)
         }
@@ -66,21 +68,21 @@ class BattleManager(private val battleRepository: BattleRepository) {
 
     private suspend fun findFreeId(): Int? {
         val start = battleRepository.getAllBattles().size + REMOTE_PREFIX
-        var r = start
-        var l = start
-        while (l > REMOTE_PREFIX && r < 2 * REMOTE_PREFIX) {
-            if (battleRepository.getBattleById(l) == null) return l
-            if (battleRepository.getBattleById(r) == null) return r
-            r++
-            l--
+        var right = start
+        var left = start
+        while (left > REMOTE_PREFIX && right < 2 * REMOTE_PREFIX) {
+            if (battleRepository.getBattleById(left) == null) return left
+            if (battleRepository.getBattleById(right) == null) return right
+            right++
+            left--
         }
-        while (l > REMOTE_PREFIX) {
-            if (battleRepository.getBattleById(l) == null) return l
-            l--
+        while (left > REMOTE_PREFIX) {
+            if (battleRepository.getBattleById(left) == null) return left
+            left--
         }
-        while (r < 2 * REMOTE_PREFIX) {
-            if (battleRepository.getBattleById(r) == null) return r
-            r++
+        while (right < 2 * REMOTE_PREFIX) {
+            if (battleRepository.getBattleById(right) == null) return right
+            right++
         }
         return null
     }

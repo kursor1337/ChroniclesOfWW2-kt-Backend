@@ -16,11 +16,12 @@ import io.ktor.server.netty.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.koin.java.KoinJavaComponent.inject
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 
 const val PORT = 8080
-const val HOST = "0.0.0.0"
+const val HOST = "192.168.31.197"
 
 class App {
 
@@ -39,11 +40,6 @@ class App {
         Log.i(TAG, "Config loaded. Launching embedded server on localhost on port ${config.port}.")
 
         embeddedServer(Netty, port = config.port, host = HOST) {
-            coroutineScope.launch {
-                val userRepository by inject<UserRepository>()
-                val userScoreRepository by inject<UserScoreRepository>()
-                userScoreRepository.syncWithUserRepository(userRepository)
-            }
             install(Koin) {
                 modules(appModule, dataModule)
             }
@@ -53,6 +49,13 @@ class App {
             configureSerialization()
             configureRouting()
             configureAuthentication()
+            coroutineScope.launch {
+                val userRepository by inject<UserRepository>(UserRepository::class.java)
+                val userScoreRepository by inject<UserScoreRepository>(UserScoreRepository::class.java)
+                userScoreRepository.syncWithUserRepository(userRepository)
+                Log.d("App", userRepository.getAllUsers().size.toString())
+                Log.d("App", userScoreRepository.getAllUserScores().size.toString())
+            }
         }.start(wait = true)
     }
 

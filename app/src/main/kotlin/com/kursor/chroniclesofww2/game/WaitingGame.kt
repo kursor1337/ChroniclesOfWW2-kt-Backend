@@ -7,7 +7,6 @@ import com.kursor.chroniclesofww2.game.WaitingGame.MessageHandler
 import com.kursor.chroniclesofww2.model.serializable.Battle
 import com.kursor.chroniclesofww2.model.serializable.GameData
 import io.ktor.server.websocket.*
-import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -18,17 +17,21 @@ import kotlinx.serialization.json.Json
 class WaitingGame(
     val id: Int,
     val initiator: Client,
-    val password: String,
+    private val password: String,
     val battle: Battle,
     val boardHeight: Int,
     val boardWidth: Int,
-    val invertNations: Boolean
+    val invertNations: Boolean,
+    val onTimeout: suspend (WaitingGame) -> Unit = {},
+    val startSession: suspend (WaitingGame) -> Unit = {}
 ) {
 
     constructor(
         id: Int,
         webSocketSession: DefaultWebSocketServerSession,
-        createGameReceiveDTO: CreateGameReceiveDTO
+        createGameReceiveDTO: CreateGameReceiveDTO,
+        onTimeout: suspend (WaitingGame) -> Unit,
+        startSession: suspend (WaitingGame) -> Unit
     ) : this(
         id,
         initiator = Client(
@@ -39,11 +42,10 @@ class WaitingGame(
         createGameReceiveDTO.battle,
         createGameReceiveDTO.boardHeight,
         createGameReceiveDTO.boardWidth,
-        createGameReceiveDTO.invertNations
+        createGameReceiveDTO.invertNations,
+        onTimeout = onTimeout,
+        startSession = startSession
     )
-
-    var timeoutListener: TimeoutListener? = null
-    var startSessionListener: StartSessionListener? = null
 
     var connected: Client? = null
 
@@ -56,10 +58,16 @@ class WaitingGame(
         }
     }
 
-    suspend fun startTimeoutTimer() {
-        CoroutineScope(Dispatchers.IO).launch {
+    private val coroutineScope = CoroutineScope(Dispatchers.IO)
+
+    init {
+        startTimeoutTimer()
+    }
+
+    private fun startTimeoutTimer() {
+        coroutineScope.launch {
             delay(TIMEOUT)
-            timeoutListener?.onTimeout(this@WaitingGame)
+            onTimeout(this@WaitingGame)
         }
     }
 
@@ -70,7 +78,7 @@ class WaitingGame(
 
     fun checkPassword(password: String?): Boolean = password == this.password
 
-    suspend fun verdict(string: String) {
+    private suspend fun verdict(string: String) {
         val gameData = if (string == GameFeaturesMessages.ACCEPTED) GameData(
             myName = initiator.login,
             enemyName = connected!!.login,
@@ -90,21 +98,12 @@ class WaitingGame(
         )
         if (gameData == null) return
         initiator.send(Json.encodeToString(gameData))
-        startSessionListener?.onSessionStart(this)
+        startSession(this)
     }
 
-    suspend fun stop() {
+    private suspend fun stop() {
         connected?.send(GameFeaturesMessages.CANCEL_CONNECTION)
-        timeoutListener?.onTimeout(this)
-    }
-
-
-    fun interface TimeoutListener {
-        suspend fun onTimeout(waitingGame: WaitingGame)
-    }
-
-    fun interface StartSessionListener {
-        suspend fun onSessionStart(waitingGame: WaitingGame)
+        onTimeout(this)
     }
 
     fun interface MessageHandler {
@@ -113,7 +112,6 @@ class WaitingGame(
 
     companion object {
         const val TIMEOUT = 120000L
-        const val TIMEOUT_MESSAGE = "Timeout"
     }
 
 }

@@ -58,17 +58,16 @@ class UserScoreRepository(
 
     suspend fun syncWithUserRepository(userRepository: UserRepository) {
         val userScoreSet = mutableSetOf<UserScore>()
-        userRepository.getAllUsers().forEach {
-            var userScore = getUserScoreByLogin(it.login)
-            if (userScore == null) {
-                userScore = UserScore(it.login, DEFAULT_USER_SCORE)
-                saveUserScore(userScore)
-            }
-            userScoreSet.add(userScore)
-        }
-        getAllUserScores().forEach {
-            if (it !in userScoreSet) deleteUserScore(it)
-        }
+        userRepository
+            .getAllUsers()
+            .map { it.login }
+            .filter { getUserScoreByLogin(it) == null }
+            .map { UserScore(it, DEFAULT_USER_SCORE) }
+            .forEach { saveUserScore(it) }
+
+        getAllUserScores().map { it.login }
+            .filter { userRepository.getUserByLogin(it) == null }
+            .forEach { deleteUserScore(it) }
     }
 
     private fun ResultRow.toUserScore(): UserScore = UserScore(

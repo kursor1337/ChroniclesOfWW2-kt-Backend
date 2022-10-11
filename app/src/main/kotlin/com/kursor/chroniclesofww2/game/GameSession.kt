@@ -25,7 +25,10 @@ import kotlinx.coroutines.launch
 class GameSession(
     val id: Int,
     val initiatorGameData: GameData,
-    val isMatch: Boolean = false
+    val isMatch: Boolean = false,
+    val onGameSessionStarted: suspend (GameSession) -> Unit = {},
+    val onGameSessionStopped: suspend (GameSession) -> Unit = {},
+    val onMatchOver: suspend (winner: String, loser: String) -> Unit = { winner, loser -> }
 ) {
 
     private val initiatorPlayer = initiatorGameData.me
@@ -41,8 +44,6 @@ class GameSession(
     val clientsInitialized: Boolean
         get() = initiatorClient != null && connectedClient != null
 
-    var gameStarted: Boolean = false
-
     val messageHandler = MessageHandler { login, receiveDTO ->
         Log.d("GameSession", "$receiveDTO")
         val client = getClientWithLogin(login)!!
@@ -50,35 +51,7 @@ class GameSession(
         val type = receiveDTO.type
         val message = receiveDTO.message
         when (type) {
-            GameSessionMessageType.MOVE -> {
-                val move = Move.decodeFromStringToSimplified(message).restore(ruleManager.model, login)
-                Log.d("GameSession", "incoming move: $move")
-                if (!ruleManager.checkMoveForValidity(move)) {
-                    client.send(
-                        gameSessionDTO = GameSessionDTO(
-                            type = GameSessionMessageType.ERROR,
-                            message = INVALID_MOVE
-                        )
-                    )
-                    return@MessageHandler
-                }
-                otherClient.send(receiveDTO)
-                when (move.type) {
-                    Move.Type.ADD -> model.handleAddMove(move as AddMove)
-                    Move.Type.MOTION -> model.handleMotionMove(move as MotionMove)
-                }
-                ruleManager.nextTurn()
-                if (isMatch) {
-                    if (ruleManager.enemyLost()) listener?.onMatchOver(
-                        winner = initiatorPlayer.name,
-                        loser = connectedPlayer.name
-                    )
-                    else if (ruleManager.meLost()) listener?.onMatchOver(
-                        winner = connectedPlayer.name,
-                        loser = initiatorPlayer.name
-                    )
-                }
-            }
+            GameSessionMessageType.MOVE -> processMoveMessage(client, otherClient, receiveDTO)
             GameSessionMessageType.DISCONNECT -> {
                 otherClient.send(
                     GameSessionDTO(
@@ -92,10 +65,41 @@ class GameSession(
         }
     }
 
-    var listener: Listener? = null
+    init {
+        startTimeoutTimer()
+    }
 
+    private suspend fun processMoveMessage(client: Client, otherClient: Client, receiveDTO: GameSessionDTO) {
+        val move = Move.decodeFromStringToSimplified(receiveDTO.message).restore(ruleManager.model, client.login)
+        Log.d("GameSession", "incoming move: $move")
+        if (!ruleManager.checkMoveForValidity(move)) {
+            client.send(
+                gameSessionDTO = GameSessionDTO(
+                    type = GameSessionMessageType.ERROR,
+                    message = INVALID_MOVE
+                )
+            )
+            return
+        }
+        otherClient.send(receiveDTO)
+        when (move.type) {
+            Move.Type.ADD -> model.handleAddMove(move as AddMove)
+            Move.Type.MOTION -> model.handleMotionMove(move as MotionMove)
+        }
+        ruleManager.nextTurn()
+        if (isMatch) {
+            if (ruleManager.enemyLost()) onMatchOver(
+                initiatorPlayer.name,
+                connectedPlayer.name
+            )
+            else if (ruleManager.meLost()) onMatchOver(
+                connectedPlayer.name,
+                initiatorPlayer.name
+            )
+        }
+    }
 
-    suspend fun stopSession() {
+    private suspend fun stopSession() {
         initiatorClient?.send(
             GameSessionDTO(
                 type = GameSessionMessageType.ERROR,
@@ -110,17 +114,16 @@ class GameSession(
         )
         initiatorClient?.webSocketSession?.close()
         connectedClient?.webSocketSession?.close()
-        listener?.onGameSessionStopped(this)
+        onGameSessionStopped(this)
     }
 
-    suspend fun startTimeoutTimer() {
+    private fun startTimeoutTimer() {
         CoroutineScope(Dispatchers.IO).launch {
             delay(TIMEOUT)
             if (!clientsInitialized) {
                 stopSession()
             }
         }
-
     }
 
     fun getPlayerWithName(name: String): Player? = when (name) {
@@ -157,14 +160,14 @@ class GameSession(
         tryStart()
     }
 
-    fun setClient(client: Client) {
+    private fun setClient(client: Client) {
         when (client.login) {
             initiatorPlayer.name -> initiatorClient = client
             connectedPlayer.name -> connectedClient = client
         }
     }
 
-    suspend fun tryStart() {
+    private suspend fun tryStart() {
         if (!clientsInitialized) return
         initiatorClient!!.send(
             GameSessionDTO(
@@ -178,8 +181,7 @@ class GameSession(
                 message = GameFeaturesMessages.GAME_STARTED
             )
         )
-        listener?.onGameSessionStarted(this)
-        gameStarted = true
+        onGameSessionStarted(this)
     }
 
 
@@ -217,11 +219,4 @@ class GameSession(
     fun interface MessageHandler {
         suspend fun onPlayerMessage(login: String, gameSessionDTO: GameSessionDTO)
     }
-
-    interface Listener {
-        suspend fun onGameSessionStarted(gameSession: GameSession) {}
-        suspend fun onGameSessionStopped(gameSession: GameSession) {}
-        suspend fun onMatchOver(winner: String, loser: String) {}
-    }
-
 }

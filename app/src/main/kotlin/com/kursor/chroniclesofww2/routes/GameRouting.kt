@@ -146,6 +146,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                 gameManager.startObservingMatches(object : GameManager.MatchControllerObserver {
                     override suspend fun onNewMatchingGame(matchingGame: MatchingGame) {
                         thisMatchingGame = matchingGame
+                        gameManager.stopObservingMatches(this)
                     }
                 })
 
@@ -159,7 +160,7 @@ fun Application.gameRouting(gameManager: GameManager) {
                         close()
                         return@webSocket
                     }
-                    thisMatchingGame?.messageHandler?.onMessage(login, frame.readText())
+                    thisMatchingGame?.messageHandler?.onMessage(login, text)
                 }
 
 

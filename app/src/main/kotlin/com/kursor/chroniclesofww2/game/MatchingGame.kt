@@ -1,6 +1,5 @@
 package com.kursor.chroniclesofww2.game
 
-import com.kursor.chroniclesofww2.entities.UserScore
 import com.kursor.chroniclesofww2.features.GameFeaturesMessages
 import com.kursor.chroniclesofww2.features.MatchingGameMessageDTO
 import com.kursor.chroniclesofww2.features.MatchingGameMessageType
@@ -39,14 +38,14 @@ const val MATCHING_GAME_BOARD_WIDTH = 10
 const val MATCHING_GAME_BOARD_HEIGHT = 10
 
 class MatchingGame(
+    val id: Int,
     val initiator: MatchingUser,
-    val connected: MatchingUser
+    val connected: MatchingUser,
+    val onStop: suspend (MatchingGame) -> Unit = {},
+    val startSession: suspend (MatchingGame) -> Unit = {}
 ) {
 
     val coroutineScope = CoroutineScope(Dispatchers.IO)
-
-    var stopListener: StopListener? = null
-    var startSessionListener: StartSessionListener? = null
 
     var initiatorAgreed = false
     var connectedAgreed = false
@@ -65,96 +64,111 @@ class MatchingGame(
 
     val messageHandler = MessageHandler { login, message ->
         when (message) {
-            GameFeaturesMessages.ACCEPTED -> {
-                if (initiator.login == login) initiatorAgreed = true
-                if (connected.login == login) connectedAgreed = true
-                if (initiatorAgreed && connectedAgreed) {
-                    initiator.client.send(
-                        Json.encodeToString(
-                            MatchingGameMessageDTO(
-                                type = MatchingGameMessageType.GAME_DATA,
-                                message = Json.encodeToString(gameData)
-                            )
-                        )
-                    )
-                    connected.client.send(
-                        Json.encodeToString(
-                            MatchingGameMessageDTO(
-                                type = MatchingGameMessageType.GAME_DATA,
-                                message = Json.encodeToString(gameData.getVersionForAnotherPlayer())
-                            )
-                        )
-                    )
-                    startSessionListener?.onSessionStart(this)
-                }
-            }
-            GameFeaturesMessages.REJECTED, GameFeaturesMessages.CANCEL_CONNECTION -> {
-                val string = Json.encodeToString(
-                    MatchingGameMessageDTO(
-                        type = MatchingGameMessageType.REJECT,
-                        message = "Rejected"
-                    )
-                )
-                initiator.client.send(string)
-                connected.client.send(string)
-                stopListener?.onStop(this)
-            }
+            GameFeaturesMessages.ACCEPTED -> sendGameCondition(login)
+            GameFeaturesMessages.REJECTED, GameFeaturesMessages.CANCEL_CONNECTION -> rejectGame()
         }
     }
 
     init {
         startTimeoutTimer()
         coroutineScope.launch {
-            initiator.client.send(
-                Json.encodeToString(
-                    MatchingGameMessageDTO(
-                        type = MatchingGameMessageType.INIT,
-                        message = Json.encodeToString(
-                            MatchingUserInfoDTO(
-                                login = connected.login,
-                                score = connected.score
-                            )
-                        )
-                    )
-                )
-            )
-            connected.client.send(
-                Json.encodeToString(
-                    MatchingGameMessageDTO(
-                        type = MatchingGameMessageType.INIT,
-                        message = Json.encodeToString(
-                            MatchingUserInfoDTO(
-                                login = initiator.login,
-                                score = initiator.score
-                            )
-                        )
-                    )
-                )
-            )
+            sendMessageInitialized()
         }
     }
 
-    fun startTimeoutTimer() {
+    private fun startTimeoutTimer() {
         coroutineScope.launch {
             delay(TIMEOUT)
-            val message = Json.encodeToString(
-                MatchingGameMessageDTO(
-                    type = MatchingGameMessageType.TIMEOUT,
-                    message = "Timeout"
-                )
+            val timeoutMessageDTO = MatchingGameMessageDTO(
+                type = MatchingGameMessageType.TIMEOUT,
+                message = "Timeout"
             )
-            initiator.client.send(message)
-            connected.client.send(message)
-            stopListener?.onStop(this@MatchingGame)
+            sendToMatchingUser(initiator, timeoutMessageDTO)
+            sendToMatchingUser(connected, timeoutMessageDTO)
+            onStop(this@MatchingGame)
         }
     }
 
-    fun interface StartSessionListener {
-        suspend fun onSessionStart(matchingGame: MatchingGame)
+    private suspend fun sendMessageInitialized() {
+        sendToMatchingUser(
+            initiator,
+            MatchingGameMessageDTO(
+                type = MatchingGameMessageType.INIT,
+                message = Json.encodeToString(
+                    MatchingUserInfoDTO(
+                        login = connected.login,
+                        score = connected.score
+                    )
+                )
+            )
+        )
+        sendToMatchingUser(
+            connected,
+            MatchingGameMessageDTO(
+                type = MatchingGameMessageType.INIT,
+                message = Json.encodeToString(
+                    MatchingUserInfoDTO(
+                        login = initiator.login,
+                        score = initiator.score
+                    )
+                )
+            )
+        )
+
+        val gameIdMessageDTO = MatchingGameMessageDTO(
+            type = MatchingGameMessageType.GAME_ID,
+            message = id.toString()
+        )
+        sendToMatchingUser(
+            initiator,
+            gameIdMessageDTO
+        )
+        sendToMatchingUser(
+            connected,
+            gameIdMessageDTO
+        )
+
     }
 
-    fun interface StopListener {
-        suspend fun onStop(matchingGame: MatchingGame)
+    private suspend fun sendToMatchingUser(
+        matchingUser: MatchingUser,
+        matchingGameMessageDTO: MatchingGameMessageDTO
+    ) {
+        matchingUser.client.send(
+            Json.encodeToString(
+                matchingGameMessageDTO
+            )
+        )
+    }
+
+    private suspend fun rejectGame() {
+        val rejectedMessageDTO = MatchingGameMessageDTO(
+            type = MatchingGameMessageType.REJECT,
+            message = "Rejected"
+        )
+        sendToMatchingUser(initiator, rejectedMessageDTO)
+        sendToMatchingUser(connected, rejectedMessageDTO)
+        onStop(this)
+    }
+
+    private suspend fun sendGameCondition(login: String) {
+        if (initiator.login == login) initiatorAgreed = true
+        if (connected.login == login) connectedAgreed = true
+        if (initiatorAgreed && connectedAgreed) {
+            sendToMatchingUser(
+                initiator, MatchingGameMessageDTO(
+                    type = MatchingGameMessageType.GAME_DATA,
+                    message = Json.encodeToString(gameData)
+                )
+            )
+            sendToMatchingUser(
+                connected, MatchingGameMessageDTO(
+                    type = MatchingGameMessageType.GAME_DATA,
+                    message = Json.encodeToString(gameData.getVersionForAnotherPlayer())
+                )
+            )
+            startSession(this)
+        }
     }
 
     fun interface MessageHandler {

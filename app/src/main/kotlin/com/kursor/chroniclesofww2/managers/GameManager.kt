@@ -7,7 +7,10 @@ import com.kursor.chroniclesofww2.model.serializable.GameData
 import com.kursor.chroniclesofww2.repositories.UserScoreRepository
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.java.KoinJavaComponent.inject
@@ -26,38 +29,31 @@ class GameManager(
     ): CreateGameResponseDTO {
         Log.d("GameManager", "createGame: ")
         val id = generateGameId()
-        val waitingGame = WaitingGame(id, webSocketServerSession, createGameReceiveDTO).apply {
-            timeoutListener = WaitingGame.TimeoutListener {
+
+        val waitingGame = WaitingGame(
+            id = id,
+            webSocketSession = webSocketServerSession,
+            createGameReceiveDTO = createGameReceiveDTO,
+            onTimeout = {
                 GameController.waitingGameTimedOut(it)
-            }
-            startSessionListener = WaitingGame.StartSessionListener {
-                val gameSession = createGameSession(it).apply {
-                    listener = object : GameSession.Listener {
-                        override suspend fun onGameSessionStopped(gameSession: GameSession) {
-                            stopGameSession(gameSession)
-                        }
+            },
+            startSession = {
+                val gameSession = createGameSession(
+                    waitingGame = it,
+                    onGameSessionStopped = {
+                        GameController.stopGameSession(it)
                     }
-                    startTimeoutTimer()
-                }
+                )
                 GameController.gameInitialized(gameSession)
             }
-            startTimeoutTimer()
-        }
+        )
         GameController.gameCreated(waitingGame)
         return CreateGameResponseDTO(gameId = id)
-    }
-
-    suspend fun stopGameSession(gameSession: GameSession) {
-        GameController.gameStopped(gameSession)
     }
 
     suspend fun matchingGame(client: Client) {
         val score = userScoreRepository.getUserScoreByLogin(client.login)!!.score
         MatchController.newMatchingUser(MatchingUser(client.login, client, score))
-    }
-
-    suspend fun stopMatchingForUser(login: String) {
-        MatchController.stopMatchingForUser(login)
     }
 
     fun getCurrentWaitingGamesInfo(): List<WaitingGameInfoDTO> {
@@ -74,6 +70,10 @@ class GameManager(
     fun getGameSessionById(id: Int): GameSession? = GameController.getCurrentGameSessions()[id]
 
     fun getWaitingGameById(id: Int): WaitingGame? = GameController.getWaitingGames()[id]
+
+    fun stopMatchingForUser(login: String) {
+        MatchController.stopMatchingForUser(login)
+    }
 
     fun startObservingGames(observer: GameControllerObserver) {
         GameController.observers.add(observer)
@@ -92,7 +92,10 @@ class GameManager(
     }
 
     private fun createGameSession(
-        waitingGame: WaitingGame
+        waitingGame: WaitingGame,
+        onGameSessionStarted: suspend (GameSession) -> Unit = {},
+        onGameSessionStopped: suspend (GameSession) -> Unit = {},
+        onMatchOver: suspend (winner: String, loser: String) -> Unit = { winner, loser -> }
     ): GameSession {
         val gameData = GameData(
             myName = waitingGame.initiator.login,
@@ -105,7 +108,10 @@ class GameManager(
         )
         return GameSession(
             id = waitingGame.id,
-            initiatorGameData = gameData
+            initiatorGameData = gameData,
+            onGameSessionStarted = onGameSessionStarted,
+            onGameSessionStopped = onGameSessionStopped,
+            onMatchOver = onMatchOver
         )
     }
 
@@ -136,7 +142,7 @@ class GameManager(
             observers.removeAll(observersToRemove)
         }
 
-        suspend fun gameStopped(gameSession: GameSession) {
+        suspend fun stopGameSession(gameSession: GameSession) {
             currentGameSessions.remove(gameSession.id)
             observers.forEach { it.onGameSessionStopped(gameSession) }
             observers.removeAll(observersToRemove)
@@ -199,7 +205,7 @@ class GameManager(
 
         }
 
-        suspend fun stopMatchingForUser(login: String) {
+        fun stopMatchingForUser(login: String) {
             matchingUsers.forEach { (score, loginMap) ->
                 if (loginMap.contains(login)) {
                     loginMap.remove(login)
@@ -210,34 +216,32 @@ class GameManager(
         suspend fun createMatchingGame(matchingUser1: MatchingUser, matchingUser2: MatchingUser) {
             matchingUsers[matchingUser1.score]?.remove(matchingUser1.login)
             matchingUsers[matchingUser2.score]?.remove(matchingUser2.login)
-            val newMatchingGame = MatchingGame(matchingUser1, matchingUser2).apply {
-                stopListener = MatchingGame.StopListener { matchingGame ->
+            val newMatchingGame = MatchingGame(
+                id = generateGameId(),
+                initiator = matchingUser1,
+                connected = matchingUser2,
+                onStop = { matchingGame ->
                     matchingGames.remove(matchingGame)
                     observers.forEach { it.onMatchingGameStop(matchingGame) }
                     observers.removeAll(observersToRemove)
-                }
-                startSessionListener = MatchingGame.StartSessionListener {
+                },
+                startSession = { matchingGame ->
                     val gameSession = GameSession(
-                        id = generateGameId(),
-                        initiatorGameData = it.gameData,
-                        isMatch = true
-                    ).apply {
-                        listener = object : GameSession.Listener {
-                            override suspend fun onGameSessionStopped(gameSession: GameSession) {
-                                GameController.gameStopped(gameSession)
-                            }
-
-                            override suspend fun onMatchOver(winner: String, loser: String) {
-                                userScoreRepository.incrementUserScore(winner)
-                                userScoreRepository.decrementUserScore(loser)
-                            }
+                        id = matchingGame.id,
+                        initiatorGameData = matchingGame.gameData,
+                        isMatch = true,
+                        onGameSessionStopped = {
+                            GameController.stopGameSession(it)
+                        },
+                        onMatchOver = { winner, loser ->
+                            userScoreRepository.incrementUserScore(winner)
+                            userScoreRepository.decrementUserScore(loser)
                         }
-                        startTimeoutTimer()
-                    }
+
+                    )
                     GameController.gameInitialized(gameSession)
                 }
-                startTimeoutTimer()
-            }
+            )
             matchingGames.add(newMatchingGame)
             observers.forEach { it.onNewMatchingGame(newMatchingGame) }
             observers.removeAll(observersToRemove)

@@ -1,7 +1,6 @@
 package com.kursor.chroniclesofww2.game
 
 import com.kursor.chroniclesofww2.features.GameSessionDTO
-import com.kursor.chroniclesofww2.model.serializable.Player
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -16,14 +15,16 @@ data class Client(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun send(gameSessionDTO: GameSessionDTO) {
-        if (webSocketSession.outgoing.isClosedForSend) return
-        webSocketSession.send(Json.encodeToString(gameSessionDTO))
+        if (!webSocketSession.outgoing.isClosedForSend) {
+            webSocketSession.send(Json.encodeToString(gameSessionDTO))
+        }
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun send(string: String) {
-        if (webSocketSession.outgoing.isClosedForSend) return
-        webSocketSession.send(string)
+        if (!webSocketSession.outgoing.isClosedForSend) {
+            webSocketSession.send(string)
+        }
     }
 
 }
