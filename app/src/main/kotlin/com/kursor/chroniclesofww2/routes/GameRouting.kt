@@ -3,6 +3,7 @@ package com.kursor.chroniclesofww2.routes
 import com.kursor.chroniclesofww2.AUTH_JWT
 import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.game.Client
+import com.kursor.chroniclesofww2.game.MatchingGame
 import com.kursor.chroniclesofww2.game.WaitingGame
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.managers.GameManager
@@ -140,7 +141,28 @@ fun Application.gameRouting(gameManager: GameManager) {
                     return@webSocket
                 }
 
+                var thisMatchingGame: MatchingGame? = null
+
+                gameManager.startObservingMatches(object : GameManager.MatchControllerObserver {
+                    override suspend fun onNewMatchingGame(matchingGame: MatchingGame) {
+                        thisMatchingGame = matchingGame
+                    }
+                })
+
                 gameManager.matchingGame(Client(login, this))
+
+                for (frame in incoming) {
+                    if (frame !is Frame.Text) continue
+                    val text = frame.readText()
+                    if (text == GameFeaturesMessages.CANCEL_CONNECTION) {
+                        gameManager.stopMatchingForUser(login)
+                        close()
+                        return@webSocket
+                    }
+                    thisMatchingGame?.messageHandler?.onMessage(login, frame.readText())
+                }
+
+
             }
 
         }

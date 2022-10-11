@@ -1,8 +1,11 @@
 package com.kursor.chroniclesofww2.game
 
+import com.kursor.chroniclesofww2.entities.UserScore
 import com.kursor.chroniclesofww2.features.GameFeaturesMessages
 import com.kursor.chroniclesofww2.features.MatchingGameMessageDTO
 import com.kursor.chroniclesofww2.features.MatchingGameMessageType
+import com.kursor.chroniclesofww2.features.MatchingUserInfoDTO
+import com.kursor.chroniclesofww2.game.MatchingGame.MessageHandler
 import com.kursor.chroniclesofww2.model.game.Nation
 import com.kursor.chroniclesofww2.model.game.board.Division
 import com.kursor.chroniclesofww2.model.serializable.Battle
@@ -40,6 +43,8 @@ class MatchingGame(
     val connected: MatchingUser
 ) {
 
+    val coroutineScope = CoroutineScope(Dispatchers.IO)
+
     var stopListener: StopListener? = null
     var startSessionListener: StartSessionListener? = null
 
@@ -64,8 +69,22 @@ class MatchingGame(
                 if (initiator.login == login) initiatorAgreed = true
                 if (connected.login == login) connectedAgreed = true
                 if (initiatorAgreed && connectedAgreed) {
-                    initiator.client.send(Json.encodeToString(gameData))
-                    connected.client.send(Json.encodeToString(gameData.getVersionForAnotherPlayer()))
+                    initiator.client.send(
+                        Json.encodeToString(
+                            MatchingGameMessageDTO(
+                                type = MatchingGameMessageType.GAME_DATA,
+                                message = Json.encodeToString(gameData)
+                            )
+                        )
+                    )
+                    connected.client.send(
+                        Json.encodeToString(
+                            MatchingGameMessageDTO(
+                                type = MatchingGameMessageType.GAME_DATA,
+                                message = Json.encodeToString(gameData.getVersionForAnotherPlayer())
+                            )
+                        )
+                    )
                     startSessionListener?.onSessionStart(this)
                 }
             }
@@ -85,15 +104,45 @@ class MatchingGame(
 
     init {
         startTimeoutTimer()
+        coroutineScope.launch {
+            initiator.client.send(
+                Json.encodeToString(
+                    MatchingGameMessageDTO(
+                        type = MatchingGameMessageType.INIT,
+                        message = Json.encodeToString(
+                            MatchingUserInfoDTO(
+                                login = connected.login,
+                                score = connected.score
+                            )
+                        )
+                    )
+                )
+            )
+            connected.client.send(
+                Json.encodeToString(
+                    MatchingGameMessageDTO(
+                        type = MatchingGameMessageType.INIT,
+                        message = Json.encodeToString(
+                            MatchingUserInfoDTO(
+                                login = initiator.login,
+                                score = initiator.score
+                            )
+                        )
+                    )
+                )
+            )
+        }
     }
 
     fun startTimeoutTimer() {
-        CoroutineScope(Dispatchers.IO).launch {
+        coroutineScope.launch {
             delay(TIMEOUT)
-            val message = Json.encodeToString(MatchingGameMessageDTO(
-                type = MatchingGameMessageType.TIMEOUT,
-                message = "Timeout"
-            ))
+            val message = Json.encodeToString(
+                MatchingGameMessageDTO(
+                    type = MatchingGameMessageType.TIMEOUT,
+                    message = "Timeout"
+                )
+            )
             initiator.client.send(message)
             connected.client.send(message)
             stopListener?.onStop(this@MatchingGame)

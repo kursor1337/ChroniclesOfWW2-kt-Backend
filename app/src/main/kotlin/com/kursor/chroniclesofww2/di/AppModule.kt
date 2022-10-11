@@ -13,7 +13,7 @@ val appModule = module {
         BattleManager(battleRepository = get())
     }
     single {
-        GameManager()
+        GameManager(userScoreRepository = get())
     }
 
 }

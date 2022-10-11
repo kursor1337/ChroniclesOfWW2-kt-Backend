@@ -8,9 +8,15 @@ import com.kursor.chroniclesofww2.plugins.configureAuthentication
 import com.kursor.chroniclesofww2.plugins.configureRouting
 import com.kursor.chroniclesofww2.plugins.configureSerialization
 import com.kursor.chroniclesofww2.plugins.configureSockets
+import com.kursor.chroniclesofww2.repositories.UserRepository
+import com.kursor.chroniclesofww2.repositories.UserScoreRepository
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
 
 const val PORT = 8080
@@ -25,12 +31,19 @@ class App {
     var serverUp = false
         private set
 
+    val coroutineScope = CoroutineScope(Dispatchers.IO)
+
     fun onConfigLoaded(config: AppConfig) {
+
         appConfig = config
         Log.i(TAG, "Config loaded. Launching embedded server on localhost on port ${config.port}.")
 
         embeddedServer(Netty, port = config.port, host = HOST) {
-
+            coroutineScope.launch {
+                val userRepository by inject<UserRepository>()
+                val userScoreRepository by inject<UserScoreRepository>()
+                userScoreRepository.syncWithUserRepository(userRepository)
+            }
             install(Koin) {
                 modules(appModule, dataModule)
             }
