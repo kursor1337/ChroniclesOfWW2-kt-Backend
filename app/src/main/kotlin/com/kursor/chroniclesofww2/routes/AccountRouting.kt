@@ -42,12 +42,9 @@ fun Application.accountRouting(userManager: UserManager) {
                 call.respond(response)
             }
             get(Routes.Account.GET_ACCOUNT_INFO.relativePath) {
-                val login = call.principal<JWTPrincipal>()?.payload?.getClaim("login")?.asString() ?: return@get
-                val user = userManager.getUserByLogin(login) ?: return@get
-                call.respond(AccountInfo(
-                    login = user.login,
-                    username = user.username
-                ))
+                val login = call.principal<JWTPrincipal>()!!.payload.getClaim("login").asString()
+                val accountInfo = userManager.getAccountInfo(login)!!
+                call.respond(accountInfo)
             }
         }
     }

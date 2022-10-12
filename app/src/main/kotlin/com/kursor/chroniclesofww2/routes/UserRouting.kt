@@ -5,7 +5,6 @@ import com.kursor.chroniclesofww2.features.RegisterErrorMessages.SUCCESS
 import com.kursor.chroniclesofww2.features.RegisterErrorMessages.USER_ALREADY_REGISTERED
 import com.kursor.chroniclesofww2.logging.Log
 import com.kursor.chroniclesofww2.managers.UserManager
-import com.kursor.chroniclesofww2.userInfo
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -17,17 +16,17 @@ fun Application.userRouting(userManager: UserManager) {
     routing {
         get(Routes.Users.GET_ALL.relativePath) {
             Log.d(TAG, "GET: getting list of users")
-            val userInfoResponseList = userManager.getAllUsers().map { it.userInfo() }
+            val userInfoResponseList = userManager.getAllUserInfos()
             call.respond(userInfoResponseList)
         }
 
         get("${Routes.Users.GET_ALL.relativePath}/{login}") {
             val login = call.parameters["login"] ?: return@get
             Log.d(TAG, "GET: $login")
-            val user = userManager.getUserByLogin(login = login)
-            if (user == null) {
+            val userInfo = userManager.getUserInfoByLogin(login = login)
+            if (userInfo == null) {
                 call.respond(HttpStatusCode.NotFound)
-            } else call.respond(HttpStatusCode.OK, user.userInfo())
+            } else call.respond(HttpStatusCode.OK, userInfo)
         }
 
         post(Routes.Users.REGISTER.relativePath) {
@@ -51,6 +50,12 @@ fun Application.userRouting(userManager: UserManager) {
                 else -> HttpStatusCode.BadRequest
             }
             call.respond(statusCode, respond)
+        }
+
+        get(Routes.Users.LEADERBOARD.relativePath) {
+            val leaderboardInfoReceiveDTO = call.receive<LeaderboardInfoReceiveDTO>()
+            val leaderboardInfoResponseDTO = userManager.leaderboard(leaderboardInfoReceiveDTO)
+            call.respond(leaderboardInfoResponseDTO)
         }
     }
 
