@@ -1,6 +1,7 @@
 package com.kursor.chroniclesofww2.managers
 
 import com.kursor.chroniclesofww2.entities.User
+import com.kursor.chroniclesofww2.entities.UserScore
 import com.kursor.chroniclesofww2.features.*
 import com.kursor.chroniclesofww2.features.LoginErrorMessages.INCORRECT_PASSWORD
 import com.kursor.chroniclesofww2.features.LoginErrorMessages.NO_SUCH_USER
@@ -123,11 +124,19 @@ class UserManager(
 
     suspend fun getAccountInfo(login: String): AccountInfo? {
         val user = getUserByLogin(login) ?: return null
-        val score = userScoreRepository.getUserScoreByLogin(login)?.score ?: DEFAULT_USER_SCORE
+        val score = userScoreRepository
+            .getUserScoreByLogin(login)?.score
+            ?: DEFAULT_USER_SCORE
+        val placeInLeaderboard = userScoreRepository
+            .getAllUserScores()
+            .sortedBy { it.score }
+            .reversed()
+            .indexOf(UserScore(login, score))
         return AccountInfo(
             login = user.login,
             username = user.username,
-            score = score
+            score = score,
+            placeInLeaderboard = placeInLeaderboard
         )
     }
 
@@ -137,9 +146,9 @@ class UserManager(
         val leaderBoard = getAllUserInfos()
             .sortedBy { it.score }
             .reversed()
-            .take(leaderboardInfoReceiveDTO.quantity)
         return LeaderboardInfoResponseDTO(
-            top = leaderBoard
+            top = if (leaderboardInfoReceiveDTO.quantity == -1) leaderBoard
+            else leaderBoard.take(leaderboardInfoReceiveDTO.quantity)
         )
     }
 }

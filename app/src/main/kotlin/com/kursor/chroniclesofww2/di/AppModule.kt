@@ -7,7 +7,10 @@ import org.koin.dsl.module
 
 val appModule = module {
     single {
-        UserManager(userRepository = get())
+        UserManager(
+            userRepository = get(),
+            userScoreRepository = get()
+        )
     }
     single {
         BattleManager(battleRepository = get())
