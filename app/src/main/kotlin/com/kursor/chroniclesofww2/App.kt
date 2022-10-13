@@ -19,9 +19,12 @@ import kotlinx.coroutines.launch
 import org.koin.java.KoinJavaComponent.inject
 import org.koin.ktor.ext.inject
 import org.koin.ktor.plugin.Koin
+import java.util.logging.Level
+import java.util.logging.Logger
+import kotlin.system.exitProcess
 
 const val PORT = 8080
-const val HOST = "192.168.31.197"
+const val HOST = "0.0.0.0"
 
 class App {
 
@@ -57,6 +60,9 @@ class App {
                 Log.d("App", userScoreRepository.getAllUserScores().size.toString())
             }
         }.start(wait = true)
+        while (true) {
+            if (readLine() == "exit") exitProcess(0)
+        }
     }
 
     fun onDestroy() {
@@ -77,6 +83,7 @@ class App {
                     App.instance.onDestroy()
                 }
             )
+            Logger.getLogger("com.zaxxer.hikari.pool.HikariPool").level = Level.OFF;
             App.instance.onConfigLoaded(config = appConfig)
         }
     }

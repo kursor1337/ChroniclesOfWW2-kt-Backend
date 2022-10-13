@@ -92,5 +92,5 @@ compileTestKotlin.kotlinOptions {
 tasks.shadowJar {
     archiveBaseName.set("chronicles-of-ww2")
     archiveClassifier.set("shadowJar")
-    archiveVersion.set("beta-0.1")
+    archiveVersion.set("beta-0.2")
 }
